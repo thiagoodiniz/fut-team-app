@@ -6,14 +6,6 @@ type JwtPayload = {
   teamId: string
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      auth?: JwtPayload
-    }
-  }
-}
-
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization
 
@@ -25,7 +17,6 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload
-
     req.auth = decoded
     return next()
   } catch {
