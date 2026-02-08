@@ -1,7 +1,8 @@
-import type { Request, Response } from "express"
-import jwt from "jsonwebtoken"
-import { prisma } from "../../lib/prisma"
-import { devLoginSchema } from "./auth.schemas"
+import type { Request, Response } from 'express'
+import jwt from 'jsonwebtoken'
+import { prisma } from '../../lib/prisma'
+import { devLoginSchema } from './auth.schemas'
+import process from 'process'
 
 export async function devLogin(req: Request, res: Response) {
   const body = devLoginSchema.parse(req.body)
@@ -11,15 +12,15 @@ export async function devLogin(req: Request, res: Response) {
     include: {
       teams: {
         include: {
-          team: true
-        }
-      }
-    }
+          team: true,
+        },
+      },
+    },
   })
 
   if (!user) {
     return res.status(404).json({
-      error: "USER_NOT_FOUND"
+      error: 'USER_NOT_FOUND',
     })
   }
 
@@ -27,15 +28,13 @@ export async function devLogin(req: Request, res: Response) {
 
   if (!firstTeam) {
     return res.status(400).json({
-      error: "USER_HAS_NO_TEAM"
+      error: 'USER_HAS_NO_TEAM',
     })
   }
 
-  const token = jwt.sign(
-    { userId: user.id, teamId: firstTeam.id },
-    process.env.JWT_SECRET!,
-    { expiresIn: "7d" }
-  )
+  const token = jwt.sign({ userId: user.id, teamId: firstTeam.id }, process.env.JWT_SECRET!, {
+    expiresIn: '7d',
+  })
 
   return res.json({
     token,
@@ -43,12 +42,12 @@ export async function devLogin(req: Request, res: Response) {
       id: user.id,
       name: user.name,
       email: user.email,
-      avatarUrl: user.avatarUrl
+      avatarUrl: user.avatarUrl,
     },
     team: {
       id: firstTeam.id,
       name: firstTeam.name,
-      slug: firstTeam.slug
-    }
+      slug: firstTeam.slug,
+    },
   })
 }
