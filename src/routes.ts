@@ -20,6 +20,22 @@ import { listMatchPresences, upsertMatchPresences } from './modules/presences/pr
 
 import { createMatchGoal, deleteGoal, listMatchGoals } from './modules/goals/goals.controller'
 
+import {
+  activateSeason,
+  createSeason,
+  deleteSeason,
+  getActiveSeason,
+  listSeasons,
+  updateSeason,
+} from './modules/seasons/seasons.controllers'
+
+import {
+  addSeasonPlayer,
+  listSeasonPlayers,
+  removeSeasonPlayer,
+  replaceSeasonPlayers,
+} from './modules/seasonPlayers/seasonPlayers.controllers'
+
 export const routes = Router()
 
 routes.get('/health', (req, res) => {
@@ -53,3 +69,17 @@ routes.post('/matches/:id/presences', authMiddleware, upsertMatchPresences)
 routes.get('/matches/:id/goals', authMiddleware, listMatchGoals)
 routes.post('/matches/:id/goals', authMiddleware, createMatchGoal)
 routes.delete('/goals/:id', authMiddleware, deleteGoal)
+
+// Seasons
+routes.get('/seasons', authMiddleware, listSeasons)
+routes.get('/seasons/active', authMiddleware, getActiveSeason)
+routes.post('/seasons', authMiddleware, createSeason)
+routes.patch('/seasons/:id', authMiddleware, updateSeason)
+routes.post('/seasons/:id/activate', authMiddleware, activateSeason)
+routes.delete('/seasons/:id', authMiddleware, deleteSeason)
+
+// Season Players
+routes.get('/seasons/:id/players', authMiddleware, listSeasonPlayers)
+routes.post('/seasons/:id/players', authMiddleware, addSeasonPlayer)
+routes.put('/seasons/:id/players', authMiddleware, replaceSeasonPlayers)
+routes.delete('/seasons/:id/players/:playerId', authMiddleware, removeSeasonPlayer)

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 enum TeamRole {
@@ -18,43 +18,44 @@ enum OAuthProvider {
 }
 
 model User {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   name      String
-  email     String   @unique
+  email     String  @unique
   avatarUrl String?
 
-  isActive  Boolean  @default(true)
+  isActive Boolean @default(true)
 
-  teams     UserTeam[]
-  accounts  OAuthAccount[]
+  teams    UserTeam[]
+  accounts OAuthAccount[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Team {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
+  id   String @id @default(uuid())
+  name String
+  slug String @unique
 
-  isActive  Boolean  @default(true)
+  isActive Boolean @default(true)
 
-  users     UserTeam[]
-  players   Player[]
-  matches   Match[]
+  users   UserTeam[]
+  players Player[]
+  matches Match[]
+  seasons Season[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model UserTeam {
-  id        String   @id @default(uuid())
-  userId    String
-  teamId    String
-  role      TeamRole @default(MEMBER)
+  id     String   @id @default(uuid())
+  userId String
+  teamId String
+  role   TeamRole @default(MEMBER)
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -64,17 +65,17 @@ model UserTeam {
 }
 
 model OAuthAccount {
-  id                String        @id @default(uuid())
-  userId            String
+  id     String @id @default(uuid())
+  userId String
 
   provider          OAuthProvider
   providerAccountId String
 
-  accessToken       String?
-  refreshToken      String?
-  expiresAt         DateTime?
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
 
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -84,19 +85,21 @@ model OAuthAccount {
 }
 
 model Player {
-  id        String   @id @default(uuid())
-  teamId    String
+  id     String @id @default(uuid())
+  teamId String
 
-  name      String
-  nickname  String?
-  position  String?
-  number    Int?
-  active    Boolean  @default(true)
+  name     String
+  nickname String?
+  position String?
+  number   Int?
+  active   Boolean @default(true)
 
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   goals     Goal[]
   presences Presence[]
+
+  seasonPlayers SeasonPlayer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -105,39 +108,75 @@ model Player {
   @@index([name])
 }
 
+model SeasonPlayer {
+  id        String   @id @default(cuid())
+  seasonId  String
+  playerId  String
+  createdAt DateTime @default(now())
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, playerId])
+  @@index([seasonId])
+  @@index([playerId])
+}
+
+model Season {
+  id        String   @id @default(cuid())
+  teamId    String
+  year      Int
+  name      String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  matches Match[]
+
+  seasonPlayers SeasonPlayer[]
+
+  @@unique([teamId, year])
+  @@index([teamId])
+}
+
 model Match {
-  id          String   @id @default(uuid())
-  teamId      String
+  id       String @id @default(uuid())
+  teamId   String
+  seasonId String
 
-  date        DateTime
-  location    String?
-  opponent    String?
-  notes       String?
+  date     DateTime
+  location String?
+  opponent String?
+  notes    String?
 
-  ourScore    Int      @default(0)
-  theirScore  Int      @default(0)
+  ourScore   Int @default(0)
+  theirScore Int @default(0)
 
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Restrict)
 
-  goals       Goal[]
-  presences   Presence[]
+  goals     Goal[]
+  presences Presence[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@index([teamId, seasonId])
+  @@index([seasonId])
   @@index([teamId])
   @@index([date])
 }
 
 model Goal {
-  id        String   @id @default(uuid())
-  matchId   String
-  playerId  String
+  id       String @id @default(uuid())
+  matchId  String
+  playerId String
 
-  minute    Int?
+  minute Int?
 
-  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -146,14 +185,14 @@ model Goal {
 }
 
 model Presence {
-  id        String   @id @default(uuid())
-  matchId   String
-  playerId  String
+  id       String @id @default(uuid())
+  matchId  String
+  playerId String
 
-  present   Boolean  @default(true)
+  present Boolean @default(true)
 
-  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 

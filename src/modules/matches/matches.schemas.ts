@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const createMatchSchema = z.object({
-  date: z.string().datetime(), // ISO string
+  date: z.string().datetime(),
   location: z.string().min(2).optional(),
   opponent: z.string().min(2).optional(),
   notes: z.string().min(1).optional(),

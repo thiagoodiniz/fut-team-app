@@ -70,7 +70,6 @@ export async function deletePlayer(req: Request, res: Response) {
     return res.status(404).json({ error: 'PLAYER_NOT_FOUND' })
   }
 
-  // soft delete
   const player = await prisma.player.update({
     where: { id: playerId },
     data: { active: false },
