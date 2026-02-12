@@ -72,6 +72,9 @@ export async function addSeasonPlayer(req: Request, res: Response) {
     },
   })
 
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
+
   return res.status(201).json({ seasonPlayer })
 }
 
@@ -110,6 +113,9 @@ export async function removeSeasonPlayer(req: Request, res: Response) {
       },
     },
   })
+
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.status(204).send()
 }

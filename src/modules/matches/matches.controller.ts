@@ -26,19 +26,10 @@ export async function listMatches(req: Request, res: Response) {
     return res.status(400).json({ error: 'NO_ACTIVE_SEASON' })
   }
 
-  const cacheKey = `matches:${teamId}:${seasonId}`
-  const cached = cache.get(cacheKey)
-
-  if (cached) {
-    return res.json({ matches: cached })
-  }
-
   const matches = await prisma.match.findMany({
     where: { teamId, seasonId },
     orderBy: [{ date: 'desc' }],
   })
-
-  cache.set(cacheKey, matches, 60 * 5) // 5 minutes
 
   return res.json({ matches })
 }
@@ -85,8 +76,8 @@ export async function createMatch(req: Request, res: Response) {
     },
   })
 
-  cache.del(`matches:${teamId}:${seasonId}`)
-  cache.del(`dashboard:${teamId}:${seasonId}`)
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.status(201).json({ match })
 }
@@ -122,8 +113,8 @@ export async function updateMatch(req: Request, res: Response) {
     },
   })
 
-  cache.del(`matches:${teamId}:${seasonId}`)
-  cache.del(`dashboard:${teamId}:${seasonId}`)
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.json({ match })
 }
@@ -150,8 +141,8 @@ export async function deleteMatch(req: Request, res: Response) {
     where: { id: matchId },
   })
 
-  cache.del(`matches:${teamId}:${seasonId}`)
-  cache.del(`dashboard:${teamId}:${seasonId}`)
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.status(204).send()
 }

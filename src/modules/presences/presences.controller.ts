@@ -25,13 +25,6 @@ export async function listMatchPresences(req: Request, res: Response) {
     return res.status(404).json({ error: 'MATCH_NOT_FOUND' })
   }
 
-  const cacheKey = `presences:${matchId}`
-  const cached = cache.get(cacheKey)
-
-  if (cached) {
-    return res.json({ presences: cached })
-  }
-
   const seasonPlayers = await prisma.seasonPlayer.findMany({
     where: { seasonId: match.seasonId },
     include: { player: true },
@@ -54,8 +47,6 @@ export async function listMatchPresences(req: Request, res: Response) {
       player: sp.player,
     }
   })
-
-  cache.set(cacheKey, result, 60 * 5) // 5 minutes
 
   return res.json({ presences: result })
 }
@@ -113,10 +104,7 @@ export async function upsertMatchPresences(req: Request, res: Response) {
           present: p.present,
         },
       }),
-    ),
-    {
-      timeout: 10000, // 10 seconds timeout for larger batches
-    }
+    )
   )
 
   const presences = await prisma.presence.findMany({
@@ -125,8 +113,8 @@ export async function upsertMatchPresences(req: Request, res: Response) {
     orderBy: [{ player: { name: 'asc' } }],
   })
 
-  cache.del(`presences:${matchId}`)
-  cache.del(`dashboard:${teamId}:${seasonId}`)
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.json({ presences })
 }

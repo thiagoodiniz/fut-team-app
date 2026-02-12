@@ -48,6 +48,9 @@ export async function createSeason(req: Request, res: Response) {
     },
   })
 
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
+
   return res.status(201).json({ season })
 }
 
@@ -71,6 +74,9 @@ export async function updateSeason(req: Request, res: Response) {
       ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
     },
   })
+
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.json({ season: updated })
 }
@@ -99,6 +105,9 @@ export async function activateSeason(req: Request, res: Response) {
     })
   })
 
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
+
   return res.json({ season: activated })
 }
 
@@ -125,6 +134,9 @@ export async function deleteSeason(req: Request, res: Response) {
   await prisma.season.delete({
     where: { id: seasonId },
   })
+
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.status(204).send()
 }

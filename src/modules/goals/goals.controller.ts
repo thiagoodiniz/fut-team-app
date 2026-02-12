@@ -30,19 +30,11 @@ export async function listMatchGoals(req: Request, res: Response) {
     return res.status(404).json({ error: 'MATCH_NOT_FOUND' })
   }
 
-  const cacheKey = `goals:${matchId}`
-  const cached = cache.get(cacheKey)
-  if (cached) {
-    return res.json({ goals: cached })
-  }
-
   const goals = await prisma.goal.findMany({
     where: { matchId },
     include: { player: true },
     orderBy: [{ createdAt: 'asc' }],
   })
-
-  cache.set(cacheKey, goals, 60 * 5)
 
   return res.json({ goals })
 }
@@ -101,8 +93,8 @@ export async function createMatchGoal(req: Request, res: Response) {
     orderBy: [{ createdAt: 'asc' }],
   })
 
-  cache.del(`goals:${matchId}`)
-  cache.del(`dashboard:${teamId}:${seasonId}`)
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.status(201).json({ goals })
 }
@@ -145,8 +137,8 @@ export async function deleteGoal(req: Request, res: Response) {
     where: { id: goalId },
   })
 
-  cache.del(`goals:${goal.match.id}`)
-  cache.del(`dashboard:${teamId}:${seasonId}`)
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.status(204).send()
 }

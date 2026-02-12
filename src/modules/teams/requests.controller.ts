@@ -65,6 +65,9 @@ export async function createJoinRequest(req: Request, res: Response) {
         },
     })
 
+    const { invalidateCache } = require('../../middlewares/cache')
+    invalidateCache(teamId)
+
     return res.json({ joinRequest })
 }
 
@@ -130,6 +133,9 @@ export async function respondToRequest(req: Request, res: Response) {
         }),
     ])
 
+    const { invalidateCache } = require('../../middlewares/cache')
+    invalidateCache(teamId)
+
     return res.json({ success: true })
 }
 
@@ -171,6 +177,9 @@ export async function updateMemberRole(req: Request, res: Response) {
         data: { role },
     })
 
+    const { invalidateCache } = require('../../middlewares/cache')
+    invalidateCache(teamId)
+
     return res.json({ success: true })
 }
 
@@ -181,6 +190,9 @@ export async function removeMember(req: Request, res: Response) {
     await prisma.userTeam.delete({
         where: { userId_teamId: { userId, teamId } },
     })
+
+    const { invalidateCache } = require('../../middlewares/cache')
+    invalidateCache(teamId)
 
     return res.json({ success: true })
 }

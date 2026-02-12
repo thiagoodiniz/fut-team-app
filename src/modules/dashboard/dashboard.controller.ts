@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
-import { cache } from '../../lib/cache'
 
 export async function getDashboardStats(req: Request, res: Response) {
   const { teamId } = req.auth!
@@ -32,13 +31,6 @@ export async function getDashboardStats(req: Request, res: Response) {
       attendance: [],
       topScorers: [],
     })
-  }
-
-  const cacheKey = `dashboard:${teamId}:${seasonId}`
-  const cached = cache.get(cacheKey)
-
-  if (cached) {
-    return res.json(cached)
   }
 
   // 1. Fetch matches for summary and last matches list
@@ -88,14 +80,12 @@ export async function getDashboardStats(req: Request, res: Response) {
   const matchIds = matches.map((m) => m.id)
 
   if (matchIds.length === 0) {
-    const emptyResult = {
+    return res.json({
       summary: { totalGames, wins, draws, losses, goalsFor, goalsAgainst, winRate },
       lastMatches,
       attendance: [],
       topScorers: [],
-    }
-    cache.set(cacheKey, emptyResult, 60)
-    return res.json(emptyResult)
+    })
   }
 
   // Fetch all goals and presences for the season to calculate complex stats
@@ -220,6 +210,5 @@ export async function getDashboardStats(req: Request, res: Response) {
     topScorers,
   }
 
-  cache.set(cacheKey, result, 60)
   return res.json(result)
 }

@@ -7,13 +7,6 @@ export async function listPlayers(req: Request, res: Response) {
   const { teamId } = req.auth!
   const seasonId = req.query.seasonId as string | undefined
 
-  const cacheKey = seasonId ? `players:${teamId}:${seasonId}` : `players:${teamId}:all`
-
-  const cached = cache.get(cacheKey)
-  if (cached) {
-    return res.json({ players: cached })
-  }
-
   if (seasonId) {
     const seasonPlayers = await prisma.seasonPlayer.findMany({
       where: { seasonId },
@@ -22,7 +15,6 @@ export async function listPlayers(req: Request, res: Response) {
     })
 
     const players = seasonPlayers.map((sp) => sp.player)
-    cache.set(cacheKey, players, 60 * 5)
     return res.json({ players })
   }
 
@@ -31,7 +23,6 @@ export async function listPlayers(req: Request, res: Response) {
     orderBy: [{ active: 'desc' }, { name: 'asc' }],
   })
 
-  cache.set(cacheKey, players, 60 * 5)
   return res.json({ players })
 }
 
@@ -70,8 +61,8 @@ export async function createPlayer(req: Request, res: Response) {
       })
   }
 
-  cache.delStartWith(`players:${teamId}`)
-  cache.delStartWith(`dashboard:${teamId}`)
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.status(201).json({ player })
 }
@@ -102,8 +93,8 @@ export async function updatePlayer(req: Request, res: Response) {
     },
   })
 
-  cache.delStartWith(`players:${teamId}`)
-  cache.delStartWith(`dashboard:${teamId}`)
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.json({ player })
 }
@@ -125,8 +116,8 @@ export async function deletePlayer(req: Request, res: Response) {
     data: { active: false },
   })
 
-  cache.delStartWith(`players:${teamId}`)
-  cache.delStartWith(`dashboard:${teamId}`)
+  const { invalidateCache } = require('../../middlewares/cache')
+  invalidateCache(teamId)
 
   return res.json({ player })
 }
