@@ -76,6 +76,7 @@ export async function getDashboardStats(req: Request, res: Response) {
   const lastMatches = matches.slice(0, 5).map((m) => ({
     id: m.id,
     date: m.date,
+    location: m.location,
     opponent: m.opponent ?? 'Sem adversário',
     ourScore: m.ourScore,
     theirScore: m.theirScore,
@@ -166,9 +167,9 @@ export async function getDashboardStats(req: Request, res: Response) {
         currentStreak,
         lastGoal: lastGoalMatch
           ? {
-              date: lastGoalMatch.date,
-              opponent: lastGoalMatch.opponent,
-            }
+            date: lastGoalMatch.date,
+            opponent: lastGoalMatch.opponent,
+          }
           : null,
       }
     })
