@@ -4,6 +4,7 @@ import { devLogin } from './modules/auth/auth.controller'
 import {
   createPlayer,
   deletePlayer,
+  getPlayerStats,
   listPlayers,
   updatePlayer,
 } from './modules/players/players.controller'
@@ -36,7 +37,16 @@ import {
   replaceSeasonPlayers,
 } from './modules/seasonPlayers/seasonPlayers.controllers'
 
+import { dashboardRoutes } from './modules/dashboard/dashboard.routes'
+import { getTeam, updateTeam } from './modules/teams/teams.controller'
+
 export const routes = Router()
+
+routes.use('/dashboard', authMiddleware, dashboardRoutes)
+
+// Teams
+routes.get('/teams/active', authMiddleware, getTeam)
+routes.patch('/teams/active', authMiddleware, updateTeam)
 
 routes.get('/health', (req, res) => {
   return res.json({ ok: true })
@@ -50,6 +60,7 @@ routes.get('/me', authMiddleware, async (req, res) => {
 
 // Players
 routes.get('/players', authMiddleware, listPlayers)
+routes.get('/players/:id/stats', authMiddleware, getPlayerStats)
 routes.post('/players', authMiddleware, createPlayer)
 routes.patch('/players/:id', authMiddleware, updatePlayer)
 routes.delete('/players/:id', authMiddleware, deletePlayer)

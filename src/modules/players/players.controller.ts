@@ -1,15 +1,37 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
+import { cache } from '../../lib/cache'
 import { createPlayerSchema, updatePlayerSchema } from './players.schemas'
 
 export async function listPlayers(req: Request, res: Response) {
   const { teamId } = req.auth!
+  const seasonId = req.query.seasonId as string | undefined
+
+  const cacheKey = seasonId ? `players:${teamId}:${seasonId}` : `players:${teamId}:all`
+
+  const cached = cache.get(cacheKey)
+  if (cached) {
+    return res.json({ players: cached })
+  }
+
+  if (seasonId) {
+    const seasonPlayers = await prisma.seasonPlayer.findMany({
+      where: { seasonId },
+      include: { player: true },
+      orderBy: [{ player: { name: 'asc' } }],
+    })
+
+    const players = seasonPlayers.map((sp) => sp.player)
+    cache.set(cacheKey, players, 60 * 5)
+    return res.json({ players })
+  }
 
   const players = await prisma.player.findMany({
     where: { teamId },
     orderBy: [{ active: 'desc' }, { name: 'asc' }],
   })
 
+  cache.set(cacheKey, players, 60 * 5)
   return res.json({ players })
 }
 
@@ -24,8 +46,32 @@ export async function createPlayer(req: Request, res: Response) {
       nickname: body.nickname,
       position: body.position,
       number: body.number,
+      ...(body.photo !== undefined ? { photo: body.photo } : {}),
     },
   })
+
+  // Auto-associate to active season if exists
+  const activeSeason = await prisma.season.findFirst({
+    where: { teamId, isActive: true },
+    select: { id: true },
+  })
+
+  if (activeSeason) {
+    await prisma.seasonPlayer
+      .create({
+        data: {
+          seasonId: activeSeason.id,
+          playerId: player.id,
+        },
+      })
+      .catch((err) => {
+        // Ignore duplicate or error, just a convenience feature
+        console.error('Failed to auto-associate player to season', err)
+      })
+  }
+
+  cache.delStartWith(`players:${teamId}`)
+  cache.delStartWith(`dashboard:${teamId}`)
 
   return res.status(201).json({ player })
 }
@@ -51,9 +97,13 @@ export async function updatePlayer(req: Request, res: Response) {
       ...(body.nickname !== undefined ? { nickname: body.nickname } : {}),
       ...(body.position !== undefined ? { position: body.position } : {}),
       ...(body.number !== undefined ? { number: body.number } : {}),
+      ...(body.photo !== undefined ? { photo: body.photo } : {}),
       ...(body.active !== undefined ? { active: body.active } : {}),
     },
   })
+
+  cache.delStartWith(`players:${teamId}`)
+  cache.delStartWith(`dashboard:${teamId}`)
 
   return res.json({ player })
 }
@@ -75,5 +125,63 @@ export async function deletePlayer(req: Request, res: Response) {
     data: { active: false },
   })
 
+  cache.delStartWith(`players:${teamId}`)
+  cache.delStartWith(`dashboard:${teamId}`)
+
   return res.json({ player })
+}
+
+export async function getPlayerStats(req: Request, res: Response) {
+  const { teamId } = req.auth!
+  const playerId = req.params.id as string
+  const seasonId = req.query.seasonId as string | undefined
+
+  const player = await prisma.player.findFirst({
+    where: { id: playerId, teamId },
+    select: { id: true },
+  })
+
+  if (!player) {
+    return res.status(404).json({ error: 'PLAYER_NOT_FOUND' })
+  }
+
+  let resolvedSeasonId = seasonId
+  if (!resolvedSeasonId) {
+    const activeSeason = await prisma.season.findFirst({
+      where: { teamId, isActive: true },
+      select: { id: true },
+    })
+    resolvedSeasonId = activeSeason?.id
+  }
+
+  if (!resolvedSeasonId) {
+    return res.json({ stats: { presences: 0, totalMatches: 0, goals: 0 } })
+  }
+
+  const matches = await prisma.match.findMany({
+    where: { teamId, seasonId: resolvedSeasonId },
+    select: { id: true },
+  })
+  const matchIds = matches.map((m) => m.id)
+
+  if (matchIds.length === 0) {
+    return res.json({ stats: { presences: 0, totalMatches: 0, goals: 0 } })
+  }
+
+  const [presenceCount, goalCount] = await Promise.all([
+    prisma.presence.count({
+      where: { playerId, matchId: { in: matchIds }, present: true },
+    }),
+    prisma.goal.count({
+      where: { playerId, matchId: { in: matchIds } },
+    }),
+  ])
+
+  return res.json({
+    stats: {
+      presences: presenceCount,
+      totalMatches: matchIds.length,
+      goals: goalCount,
+    },
+  })
 }

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
+import { cache } from '../../lib/cache'
 import { createGoalSchema } from './goals.schemas'
 
 async function getActiveSeasonId(teamId: string) {
@@ -29,11 +30,19 @@ export async function listMatchGoals(req: Request, res: Response) {
     return res.status(404).json({ error: 'MATCH_NOT_FOUND' })
   }
 
+  const cacheKey = `goals:${matchId}`
+  const cached = cache.get(cacheKey)
+  if (cached) {
+    return res.json({ goals: cached })
+  }
+
   const goals = await prisma.goal.findMany({
     where: { matchId },
     include: { player: true },
     orderBy: [{ createdAt: 'asc' }],
   })
+
+  cache.set(cacheKey, goals, 60 * 5)
 
   return res.json({ goals })
 }
@@ -50,7 +59,7 @@ export async function createMatchGoal(req: Request, res: Response) {
 
   const match = await prisma.match.findFirst({
     where: { id: matchId, teamId, seasonId },
-    select: { id: true },
+    select: { id: true, ourScore: true },
   })
 
   if (!match) {
@@ -66,18 +75,36 @@ export async function createMatchGoal(req: Request, res: Response) {
     return res.status(400).json({ error: 'PLAYER_NOT_FOUND_FOR_TEAM' })
   }
 
-  const goal = await prisma.goal.create({
-    data: {
-      matchId,
-      playerId: body.playerId,
-      minute: body.minute,
-    },
-    include: {
-      player: true,
-    },
+  // Count existing goals (non-own-goals) + new non-own-goals
+  const existingGoalsCount = await prisma.goal.count({
+    where: { matchId, ownGoal: false },
+  })
+  const newNonOwnGoals = body.goals.filter(g => !g.ownGoal).length
+  if (existingGoalsCount + newNonOwnGoals > match.ourScore) {
+    return res.status(400).json({ error: 'GOAL_LIMIT_EXCEEDED', message: 'Quantidade de gols excede o placar' })
+  }
+
+  const goalsData = body.goals.map((g) => ({
+    matchId,
+    playerId: body.playerId,
+    minute: g.minute ?? undefined,
+    ownGoal: g.ownGoal ?? false,
+  }))
+
+  await prisma.$transaction(
+    goalsData.map((data) => prisma.goal.create({ data }))
+  )
+
+  const goals = await prisma.goal.findMany({
+    where: { matchId },
+    include: { player: true },
+    orderBy: [{ createdAt: 'asc' }],
   })
 
-  return res.status(201).json({ goal })
+  cache.del(`goals:${matchId}`)
+  cache.del(`dashboard:${teamId}:${seasonId}`)
+
+  return res.status(201).json({ goals })
 }
 
 export async function deleteGoal(req: Request, res: Response) {
@@ -117,6 +144,9 @@ export async function deleteGoal(req: Request, res: Response) {
   await prisma.goal.delete({
     where: { id: goalId },
   })
+
+  cache.del(`goals:${goal.match.id}`)
+  cache.del(`dashboard:${teamId}:${seasonId}`)
 
   return res.status(204).send()
 }

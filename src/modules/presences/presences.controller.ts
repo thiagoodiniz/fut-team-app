@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
+import { cache } from '../../lib/cache'
 import { upsertPresencesSchema } from './presences.schemas'
 
 async function getActiveSeasonId(teamId: string) {
@@ -15,27 +16,48 @@ export async function listMatchPresences(req: Request, res: Response) {
   const { teamId } = req.auth!
   const matchId = req.params.id as string
 
-  const seasonId = await getActiveSeasonId(teamId)
-  if (!seasonId) {
-    return res.status(400).json({ error: 'NO_ACTIVE_SEASON' })
-  }
-
   const match = await prisma.match.findFirst({
-    where: { id: matchId, teamId, seasonId },
-    select: { id: true },
+    where: { id: matchId, teamId },
+    select: { id: true, seasonId: true },
   })
 
   if (!match) {
     return res.status(404).json({ error: 'MATCH_NOT_FOUND' })
   }
 
-  const presences = await prisma.presence.findMany({
-    where: { matchId },
+  const cacheKey = `presences:${matchId}`
+  const cached = cache.get(cacheKey)
+
+  if (cached) {
+    return res.json({ presences: cached })
+  }
+
+  const seasonPlayers = await prisma.seasonPlayer.findMany({
+    where: { seasonId: match.seasonId },
     include: { player: true },
     orderBy: [{ player: { name: 'asc' } }],
   })
 
-  return res.json({ presences })
+  const presences = await prisma.presence.findMany({
+    where: { matchId },
+  })
+
+  const result = seasonPlayers.map((sp) => {
+    const presence = presences.find((p) => p.playerId === sp.playerId)
+
+    return {
+      id: presence?.id ?? undefined,
+      matchId,
+      playerId: sp.playerId,
+      present: presence?.present ?? false,
+      createdAt: presence?.createdAt ?? undefined,
+      player: sp.player,
+    }
+  })
+
+  cache.set(cacheKey, result, 60 * 5) // 5 minutes
+
+  return res.json({ presences: result })
 }
 
 export async function upsertMatchPresences(req: Request, res: Response) {
@@ -72,6 +94,7 @@ export async function upsertMatchPresences(req: Request, res: Response) {
     })
   }
 
+  // Use a transaction with controlled timeout to prevent expiration
   await prisma.$transaction(
     body.presences.map((p) =>
       prisma.presence.upsert({
@@ -91,6 +114,9 @@ export async function upsertMatchPresences(req: Request, res: Response) {
         },
       }),
     ),
+    {
+      timeout: 10000, // 10 seconds timeout for larger batches
+    }
   )
 
   const presences = await prisma.presence.findMany({
@@ -98,6 +124,9 @@ export async function upsertMatchPresences(req: Request, res: Response) {
     include: { player: true },
     orderBy: [{ player: { name: 'asc' } }],
   })
+
+  cache.del(`presences:${matchId}`)
+  cache.del(`dashboard:${teamId}:${seasonId}`)
 
   return res.json({ presences })
 }

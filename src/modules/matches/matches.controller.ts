@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
+import { cache } from '../../lib/cache'
 import { createMatchSchema, updateMatchSchema } from './matches.schemas'
 
 async function getActiveSeasonId(teamId: string) {
@@ -13,16 +14,31 @@ async function getActiveSeasonId(teamId: string) {
 
 export async function listMatches(req: Request, res: Response) {
   const { teamId } = req.auth!
+  const querySeasonId = req.query.seasonId as string | undefined
 
-  const seasonId = await getActiveSeasonId(teamId)
+  let seasonId = querySeasonId
+
+  if (!seasonId) {
+    seasonId = (await getActiveSeasonId(teamId)) ?? undefined
+  }
+
   if (!seasonId) {
     return res.status(400).json({ error: 'NO_ACTIVE_SEASON' })
+  }
+
+  const cacheKey = `matches:${teamId}:${seasonId}`
+  const cached = cache.get(cacheKey)
+
+  if (cached) {
+    return res.json({ matches: cached })
   }
 
   const matches = await prisma.match.findMany({
     where: { teamId, seasonId },
     orderBy: [{ date: 'desc' }],
   })
+
+  cache.set(cacheKey, matches, 60 * 5) // 5 minutes
 
   return res.json({ matches })
 }
@@ -69,6 +85,9 @@ export async function createMatch(req: Request, res: Response) {
     },
   })
 
+  cache.del(`matches:${teamId}:${seasonId}`)
+  cache.del(`dashboard:${teamId}:${seasonId}`)
+
   return res.status(201).json({ match })
 }
 
@@ -103,6 +122,9 @@ export async function updateMatch(req: Request, res: Response) {
     },
   })
 
+  cache.del(`matches:${teamId}:${seasonId}`)
+  cache.del(`dashboard:${teamId}:${seasonId}`)
+
   return res.json({ match })
 }
 
@@ -127,6 +149,9 @@ export async function deleteMatch(req: Request, res: Response) {
   await prisma.match.delete({
     where: { id: matchId },
   })
+
+  cache.del(`matches:${teamId}:${seasonId}`)
+  cache.del(`dashboard:${teamId}:${seasonId}`)
 
   return res.status(204).send()
 }
