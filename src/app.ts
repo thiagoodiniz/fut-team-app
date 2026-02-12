@@ -26,7 +26,30 @@ if (process.env.SENTRY_DSN) {
 }
 
 app.use(helmet())
-app.use(cors())
+
+const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || []
+app.use(
+    cors({
+        origin: (origin, callback) => {
+            // Allow requests with no origin (like mobile apps or curl)
+            if (!origin) return callback(null, true)
+
+            if (
+                process.env.NODE_ENV === 'development' ||
+                allowedOrigins.indexOf(origin) !== -1 ||
+                allowedOrigins.includes('*')
+            ) {
+                callback(null, true)
+            } else {
+                callback(new Error('Not allowed by CORS'))
+            }
+        },
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
+        credentials: true,
+    })
+)
+
 app.use(express.json())
 
 if (process.env.SENTRY_DSN) {
