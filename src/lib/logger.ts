@@ -4,14 +4,28 @@ const isProd = process.env.NODE_ENV === 'production'
 
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? (isProd ? 'info' : 'debug'),
-  transport: isProd
-    ? undefined
-    : {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname',
-        },
-      },
+  transport: {
+    targets: [
+      ...(isProd
+        ? []
+        : [
+          {
+            target: 'pino-pretty',
+            options: {
+              colorize: true,
+              translateTime: 'SYS:standard',
+              ignore: 'pid,hostname',
+            },
+          },
+        ]),
+      ...(process.env.LOGTAIL_SOURCE_TOKEN
+        ? [
+          {
+            target: '@logtail/pino',
+            options: { sourceToken: process.env.LOGTAIL_SOURCE_TOKEN },
+          },
+        ]
+        : []),
+    ],
+  },
 })

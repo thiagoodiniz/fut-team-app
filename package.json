@@ -21,8 +21,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@logtail/pino": "^0.5.7",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
+    "@sentry/node": "^10.38.0",
+    "@sentry/profiling-node": "^10.38.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",

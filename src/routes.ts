@@ -70,6 +70,16 @@ routes.get('/health', (req, res) => {
   return res.json({ ok: true })
 })
 
+routes.get('/debug-sentry', (req, res) => {
+  throw new Error('Sentry Debug Error - Fut-Team API')
+})
+
+routes.get('/debug-log', (req, res) => {
+  const { logger } = require('./lib/logger')
+  logger.info({ test: true, timestamp: new Date() }, 'Better Stack Debug Log')
+  return res.json({ message: 'Log enviado para o Better Stack!' })
+})
+
 routes.post('/auth/register', register)
 routes.post('/auth/login', login)
 routes.post('/auth/google', googleLogin)
