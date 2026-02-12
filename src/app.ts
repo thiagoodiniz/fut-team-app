@@ -8,8 +8,11 @@ import { routes } from './routes'
 import { requestLogger } from './middlewares/requestLogger'
 import { requestId } from './middlewares/requestId'
 import { errorMiddleware } from './middlewares/error'
+import { swaggerUi, swaggerSpec } from './lib/swagger'
 
 export const app = express()
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 if (process.env.SENTRY_DSN) {
     Sentry.init({
