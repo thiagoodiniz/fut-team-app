@@ -17,16 +17,24 @@ enum OAuthProvider {
   FACEBOOK
 }
 
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id        String  @id @default(uuid())
   name      String
   email     String  @unique
+  password  String?
   avatarUrl String?
 
   isActive Boolean @default(true)
 
   teams    UserTeam[]
   accounts OAuthAccount[]
+  joinRequests JoinRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -47,6 +55,7 @@ model Team {
   players Player[]
   matches Match[]
   seasons Season[]
+  joinRequests JoinRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -85,6 +94,24 @@ model OAuthAccount {
   updatedAt DateTime @updatedAt
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model JoinRequest {
+  id     String @id @default(uuid())
+  userId String
+  teamId String
+  status JoinRequestStatus @default(PENDING)
+  role   TeamRole          @default(MEMBER)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, teamId])
+  @@index([teamId])
   @@index([userId])
 }
 

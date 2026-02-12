@@ -5,6 +5,7 @@ import process from 'process'
 type JwtPayload = {
   userId: string
   teamId: string
+  role: 'OWNER' | 'ADMIN' | 'MEMBER'
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {

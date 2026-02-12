@@ -1,4 +1,4 @@
-export {}
+export { }
 
 declare global {
   namespace Express {
@@ -6,6 +6,7 @@ declare global {
       auth?: {
         userId: string
         teamId: string
+        role: 'OWNER' | 'ADMIN' | 'MEMBER'
       }
     }
   }
