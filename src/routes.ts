@@ -246,7 +246,7 @@ routes.patch('/teams/active/members/:userId', authMiddleware, adminMiddleware, u
  */
 routes.delete('/teams/active/members/:userId', authMiddleware, adminMiddleware, removeMember)
 
-routes.get('/health', (req, res) => {
+routes.get('/health', (req: Request, res: Response) => {
   return res.json({ ok: true })
 })
 
@@ -313,7 +313,7 @@ routes.post('/auth/login', login)
  */
 routes.post('/auth/google', googleLogin)
 
-routes.get('/me', authMiddleware, async (req, res) => {
+routes.get('/me', authMiddleware, async (req: Request, res: Response) => {
   return res.json({ auth: req.auth })
 })
 

@@ -23,7 +23,7 @@ export function cacheMiddleware(ttlSeconds = 60) {
 
         // Override res.json to capture the response and cache it
         const originalJson = res.json
-        res.json = function (body) {
+        res.json = function (body: any) {
             cache.set(cacheKey, body, ttlSeconds)
             return originalJson.call(this, body)
         }
