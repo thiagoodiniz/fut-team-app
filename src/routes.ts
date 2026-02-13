@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, Request, Response } from 'express'
 import { authMiddleware } from './middlewares/auth'
 import { adminMiddleware } from './middlewares/rbac'
 import { cacheMiddleware } from './middlewares/cache'

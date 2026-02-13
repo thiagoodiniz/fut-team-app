@@ -173,7 +173,7 @@ export async function updateMemberRole(req: Request, res: Response) {
     // (Simplification: just allow owners/admins to change roles)
 
     await prisma.userTeam.update({
-        where: { userId_teamId: { userId, teamId } },
+        where: { userId_teamId: { userId: userId as string, teamId: teamId as string } },
         data: { role },
     })
 
@@ -188,7 +188,7 @@ export async function removeMember(req: Request, res: Response) {
     const { userId } = req.params
 
     await prisma.userTeam.delete({
-        where: { userId_teamId: { userId, teamId } },
+        where: { userId_teamId: { userId: userId as string, teamId: teamId as string } },
     })
 
     const { invalidateCache } = require('../../middlewares/cache')

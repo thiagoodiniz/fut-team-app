@@ -1,11 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import { randomUUID } from 'crypto'
 
-declare module 'express' {
-  interface Request {
-    requestId?: string
-  }
-}
 
 export function requestId(req: Request, res: Response, next: NextFunction) {
   req.requestId = randomUUID()
