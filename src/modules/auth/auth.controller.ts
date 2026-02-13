@@ -8,6 +8,8 @@ import { registerSchema, loginSchema, googleLoginSchema } from './auth.schemas'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
+const TAPA_JEGS_TEAM_ID = '95be632b-40d7-45da-a934-f6ae239e7a13'
+
 export async function register(req: Request, res: Response) {
   const { name, email, password } = registerSchema.parse(req.body)
 
@@ -23,10 +25,27 @@ export async function register(req: Request, res: Response) {
       name,
       email,
       password: hashedPassword,
+      teams: {
+        create: {
+          teamId: TAPA_JEGS_TEAM_ID,
+          role: 'MEMBER',
+        },
+      },
+    },
+    include: {
+      teams: {
+        include: { team: true },
+      },
     },
   })
 
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' })
+  const userTeam = user.teams[0]
+
+  const token = jwt.sign(
+    { userId: user.id, teamId: userTeam.team.id, role: userTeam.role },
+    process.env.JWT_SECRET!,
+    { expiresIn: '7d' }
+  )
 
   return res.json({
     token,
@@ -35,7 +54,12 @@ export async function register(req: Request, res: Response) {
       name: user.name,
       email: user.email,
     },
-    onboarding: true,
+    team: {
+      id: userTeam.team.id,
+      name: userTeam.team.name,
+      slug: userTeam.team.slug,
+      role: userTeam.role,
+    },
   })
 }
 
@@ -65,6 +89,7 @@ export async function login(req: Request, res: Response) {
   const userTeam = user.teams[0]
 
   if (!userTeam) {
+    // If somehow a legacy user has no team (shouldn't happen with new auto-linking)
     const pendingRequest = user.joinRequests[0]
 
     return res.json({
@@ -144,6 +169,12 @@ export async function googleLogin(req: Request, res: Response) {
           email,
           name: name || '',
           avatarUrl: picture,
+          teams: {
+            create: {
+              teamId: TAPA_JEGS_TEAM_ID,
+              role: 'MEMBER',
+            },
+          },
         },
         include: {
           teams: { include: { team: true } },
@@ -157,8 +188,8 @@ export async function googleLogin(req: Request, res: Response) {
     const userTeam = user.teams[0]
 
     if (!userTeam) {
-      // User exists but has no team. Check for pending requests.
-      const pendingRequest = user.joinRequests[0] // Since we filtered by PENDING and limited to one usually
+      // Legacy user or fallback
+      const pendingRequest = user.joinRequests[0]
 
       return res.json({
         token: jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' }),
