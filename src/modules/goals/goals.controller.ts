@@ -58,13 +58,25 @@ export async function createMatchGoal(req: Request, res: Response) {
     return res.status(404).json({ error: 'MATCH_NOT_FOUND' })
   }
 
-  const player = await prisma.player.findFirst({
-    where: { id: body.playerId, teamId },
-    select: { id: true },
-  })
+  const hasNonOwnGoals = body.goals.some((g) => !g.ownGoal)
+  if (hasNonOwnGoals && !body.playerId) {
+    return res.status(400).json({ error: 'PLAYER_REQUIRED_FOR_NON_OWN_GOALS' })
+  }
 
-  if (!player) {
-    return res.status(400).json({ error: 'PLAYER_NOT_FOUND_FOR_TEAM' })
+  if (hasNonOwnGoals && body.playerId) {
+    const player = await prisma.player.findFirst({
+      where: { id: body.playerId, teamId },
+      select: { id: true },
+    })
+
+    if (!player) {
+      return res.status(400).json({ error: 'PLAYER_NOT_FOUND_FOR_TEAM' })
+    }
+  }
+
+  const invalidGoalType = body.goals.some((g) => (g.freeKick ?? false) && (g.penalty ?? false))
+  if (invalidGoalType) {
+    return res.status(400).json({ error: 'INVALID_GOAL_TYPE' })
   }
 
   // Count existing goals (non-own-goals) + new non-own-goals
@@ -78,9 +90,11 @@ export async function createMatchGoal(req: Request, res: Response) {
 
   const goalsData = body.goals.map((g) => ({
     matchId,
-    playerId: body.playerId,
+    playerId: g.ownGoal ? null : (body.playerId ?? null),
     minute: g.minute ?? undefined,
     ownGoal: g.ownGoal ?? false,
+    freeKick: g.ownGoal ? false : (g.freeKick ?? false),
+    penalty: g.ownGoal ? false : (g.penalty ?? false),
   }))
 
   await prisma.$transaction(

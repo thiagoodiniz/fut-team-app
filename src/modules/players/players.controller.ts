@@ -164,7 +164,7 @@ export async function getPlayerStats(req: Request, res: Response) {
       where: { playerId, matchId: { in: matchIds }, present: true },
     }),
     prisma.goal.count({
-      where: { playerId, matchId: { in: matchIds } },
+      where: { playerId, matchId: { in: matchIds }, ownGoal: false },
     }),
   ])
 

@@ -39,6 +39,7 @@ export async function getDashboardStats(req: Request, res: Response) {
     orderBy: { date: 'desc' },
     include: {
       goals: {
+        orderBy: { createdAt: 'asc' },
         include: { player: true },
       },
     },
@@ -73,7 +74,9 @@ export async function getDashboardStats(req: Request, res: Response) {
     ourScore: m.ourScore,
     theirScore: m.theirScore,
     result: m.ourScore > m.theirScore ? 'WIN' : m.ourScore < m.theirScore ? 'LOSS' : 'DRAW',
-    scorers: m.goals.map((g) => g.player.nickname || g.player.name),
+    scorers: m.goals
+      .filter((g) => !g.ownGoal && g.player)
+      .map((g) => g.player!.nickname || g.player!.name),
   }))
 
   // 4. Detailed Data Retrieval
@@ -111,8 +114,10 @@ export async function getDashboardStats(req: Request, res: Response) {
   // 5. Scorer and Attendance processing
   const topScorers = allSeasonPlayers
     .map((sp) => {
-      const playerGoals = allGoals.filter((g) => g.playerId === sp.playerId)
+      const playerGoals = allGoals.filter((g) => g.playerId === sp.playerId && !g.ownGoal)
       const totalGoals = playerGoals.length
+      const freeKickGoals = playerGoals.filter((g) => g.freeKick).length
+      const penaltyGoals = playerGoals.filter((g) => g.penalty).length
 
       if (totalGoals === 0) return null
 
@@ -151,6 +156,8 @@ export async function getDashboardStats(req: Request, res: Response) {
         nickname: sp.player.nickname,
         photo: sp.player.photo,
         goals: totalGoals,
+        freeKickGoals,
+        penaltyGoals,
         hatTricks,
         doubles,
         maxStreak,
