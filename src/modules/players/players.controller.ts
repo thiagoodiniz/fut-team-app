@@ -176,3 +176,151 @@ export async function getPlayerStats(req: Request, res: Response) {
     },
   })
 }
+
+export async function getPlayerGoalMatches(req: Request, res: Response) {
+  const { teamId } = req.auth!
+  const playerId = req.params.id as string
+  const seasonId = req.query.seasonId as string | undefined
+
+  const player = await prisma.player.findFirst({
+    where: { id: playerId, teamId },
+    select: { id: true, name: true, nickname: true, photo: true },
+  })
+
+  if (!player) {
+    return res.status(404).json({ error: 'PLAYER_NOT_FOUND' })
+  }
+
+  let resolvedSeasonId = seasonId
+  if (!resolvedSeasonId) {
+    const activeSeason = await prisma.season.findFirst({
+      where: { teamId, isActive: true },
+      select: { id: true },
+    })
+    resolvedSeasonId = activeSeason?.id
+  }
+
+  if (!resolvedSeasonId) {
+    return res.json({ player, matches: [], stats: { maxStreak: 0 } })
+  }
+
+  const matches = await prisma.match.findMany({
+    where: { teamId, seasonId: resolvedSeasonId },
+    orderBy: { date: 'desc' },
+    include: {
+      goals: {
+        where: { ownGoal: false },
+        include: { player: true },
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  })
+
+  const result = matches
+    .filter((m) => m.goals.some((g) => g.playerId === playerId))
+    .map((m) => ({
+      id: m.id,
+      date: m.date,
+      location: m.location,
+      opponent: m.opponent ?? 'Sem adversario',
+      ourScore: m.ourScore,
+      theirScore: m.theirScore,
+      scorers: m.goals
+        .filter((g) => g.player)
+        .map((g) => ({
+          playerId: g.playerId!,
+          name: g.player!.name,
+          nickname: g.player!.nickname,
+        })),
+    }))
+
+  let currentStreak = 0
+  let maxStreak = 0
+
+  for (const match of [...matches].reverse()) {
+    const scoredInMatch = match.goals.some((goal) => goal.playerId === playerId)
+    if (scoredInMatch) {
+      currentStreak += 1
+      if (currentStreak > maxStreak) maxStreak = currentStreak
+    } else {
+      currentStreak = 0
+    }
+  }
+
+  return res.json({ player, matches: result, stats: { maxStreak } })
+}
+
+export async function getPlayerPresenceMatches(req: Request, res: Response) {
+  const { teamId } = req.auth!
+  const playerId = req.params.id as string
+  const seasonId = req.query.seasonId as string | undefined
+
+  const player = await prisma.player.findFirst({
+    where: { id: playerId, teamId },
+    select: { id: true, name: true, nickname: true, photo: true },
+  })
+
+  if (!player) {
+    return res.status(404).json({ error: 'PLAYER_NOT_FOUND' })
+  }
+
+  let resolvedSeasonId = seasonId
+  if (!resolvedSeasonId) {
+    const activeSeason = await prisma.season.findFirst({
+      where: { teamId, isActive: true },
+      select: { id: true },
+    })
+    resolvedSeasonId = activeSeason?.id
+  }
+
+  if (!resolvedSeasonId) {
+    return res.json({
+      player,
+      matches: [],
+      stats: { presentCount: 0, absentCount: 0, totalMatches: 0 },
+    })
+  }
+
+  const matches = await prisma.match.findMany({
+    where: { teamId, seasonId: resolvedSeasonId },
+    orderBy: { date: 'desc' },
+    include: {
+      goals: {
+        where: { ownGoal: false },
+        include: { player: true },
+        orderBy: { createdAt: 'asc' },
+      },
+      presences: {
+        where: { playerId },
+        select: { present: true },
+      },
+    },
+  })
+
+  const result = matches.map((m) => ({
+    id: m.id,
+    date: m.date,
+    location: m.location,
+    opponent: m.opponent ?? 'Sem adversario',
+    ourScore: m.ourScore,
+    theirScore: m.theirScore,
+    present: m.presences[0]?.present === true,
+    scorers: m.goals
+      .filter((g) => g.player)
+      .map((g) => ({
+        playerId: g.playerId!,
+        name: g.player!.name,
+        nickname: g.player!.nickname,
+      })),
+  }))
+
+  const presentCount = result.filter((match) => match.present).length
+  const totalMatches = result.length
+  const absentCount = totalMatches - presentCount
+
+  return res.json({
+    player,
+    matches: result,
+    stats: { presentCount, absentCount, totalMatches },
+  })
+}

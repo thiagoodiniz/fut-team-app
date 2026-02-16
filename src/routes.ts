@@ -6,6 +6,8 @@ import { register, login, googleLogin } from './modules/auth/auth.controller'
 import {
   createPlayer,
   deletePlayer,
+  getPlayerGoalMatches,
+  getPlayerPresenceMatches,
   getPlayerStats,
   listPlayers,
   updatePlayer,
@@ -351,6 +353,8 @@ routes.get('/players', authMiddleware, cacheMiddleware(300), listPlayers)
  *       200: { description: Player statistics }
  */
 routes.get('/players/:id/stats', authMiddleware, cacheMiddleware(300), getPlayerStats)
+routes.get('/players/:id/goal-matches', authMiddleware, cacheMiddleware(300), getPlayerGoalMatches)
+routes.get('/players/:id/presence-matches', authMiddleware, cacheMiddleware(300), getPlayerPresenceMatches)
 
 /**
  * @swagger
