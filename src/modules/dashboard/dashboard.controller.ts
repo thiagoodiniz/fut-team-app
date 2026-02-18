@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
+import { cache } from '../../lib/cache'
 
 export async function getDashboardStats(req: Request, res: Response) {
   const { teamId } = req.auth!
@@ -30,10 +31,18 @@ export async function getDashboardStats(req: Request, res: Response) {
       lastMatches: [],
       attendance: [],
       topScorers: [],
+      nextMatch: null,
     })
   }
 
-  // 1. Fetch matches for summary and last matches list
+  const cacheKey = `dashboard:${teamId}:${seasonId}`
+  const cachedData = cache.get(cacheKey)
+
+  if (cachedData) {
+    return res.json(cachedData)
+  }
+
+  // 1. Fetch ALL matches for the season to process stats
   const matches = await prisma.match.findMany({
     where: { teamId, seasonId },
     orderBy: { date: 'desc' },
@@ -42,17 +51,40 @@ export async function getDashboardStats(req: Request, res: Response) {
         orderBy: { createdAt: 'asc' },
         include: { player: true },
       },
+      _count: {
+        select: { presences: { where: { present: true } } } // Count only PRESENT players
+      }
     },
   })
 
-  // 2. Calculate Summary
+  // Filter matches that effectively happened (have at least one present player)
+  const playedMatches = matches.filter(m => m._count.presences > 0)
+
+  // 2. Fetch Next Match: The upcoming match that has NO presence marked yet.
+  const nextMatch = await prisma.match.findFirst({
+    where: {
+      teamId,
+      seasonId,
+      date: {
+        gte: new Date(new Date().setHours(0, 0, 0, 0)), // Future or today (start of day)
+      },
+      presences: {
+        none: {
+          present: true,
+        }, // Effectively no confirmed presences
+      }
+    },
+    orderBy: { date: 'asc' },
+  })
+
+  // 3. Calculate Summary (using ONLY playedMatches)
   let wins = 0
   let draws = 0
   let losses = 0
   let goalsFor = 0
   let goalsAgainst = 0
 
-  for (const m of matches) {
+  for (const m of playedMatches) {
     goalsFor += m.ourScore
     goalsAgainst += m.theirScore
 
@@ -61,12 +93,12 @@ export async function getDashboardStats(req: Request, res: Response) {
     else draws++
   }
 
-  const totalGames = matches.length
+  const totalGames = playedMatches.length
   // Win rate = (Wins / Total) * 100
   const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0
 
-  // 3. Last Matches (take 5)
-  const lastMatches = matches.slice(0, 5).map((m) => ({
+  // 4. Last Matches (take 5 from playedMatches)
+  const lastMatchesList = playedMatches.slice(0, 5).map((m) => ({
     id: m.id,
     date: m.date,
     location: m.location,
@@ -79,19 +111,27 @@ export async function getDashboardStats(req: Request, res: Response) {
       .map((g) => g.player!.nickname || g.player!.name),
   }))
 
-  // 4. Detailed Data Retrieval
-  const matchIds = matches.map((m) => m.id)
+  // 5. Detailed Data Retrieval (ONLY for playedMatches)
+  const matchIds = playedMatches.map((m) => m.id)
 
-  if (matchIds.length === 0) {
-    return res.json({
-      summary: { totalGames, wins, draws, losses, goalsFor, goalsAgainst, winRate },
-      lastMatches,
-      attendance: [],
-      topScorers: [],
-    })
+  const responseBase = {
+    summary: { totalGames, wins, draws, losses, goalsFor, goalsAgainst, winRate },
+    lastMatches: lastMatchesList,
+    attendance: [],
+    topScorers: [],
+    nextMatch: nextMatch ? {
+      id: nextMatch.id,
+      date: nextMatch.date,
+      location: nextMatch.location,
+      opponent: nextMatch.opponent,
+    } : null
   }
 
-  // Fetch all goals and presences for the season to calculate complex stats
+  if (matchIds.length === 0) {
+    return res.json(responseBase)
+  }
+
+  // Fetch all goals and presences ONLY for played matches
   const allGoals = await prisma.goal.findMany({
     where: { matchId: { in: matchIds } },
     include: { match: true },
@@ -107,11 +147,11 @@ export async function getDashboardStats(req: Request, res: Response) {
     include: { player: true },
   })
 
-  const sortedMatchesAsc = [...matches].sort(
+  const sortedMatchesAsc = [...playedMatches].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   )
 
-  // 5. Scorer and Attendance processing
+  // 6. Scorer and Attendance processing
   const topScorers = allSeasonPlayers
     .map((sp) => {
       const playerGoals = allGoals.filter((g) => g.playerId === sp.playerId && !g.ownGoal)
@@ -180,6 +220,7 @@ export async function getDashboardStats(req: Request, res: Response) {
 
       if (presentCount === 0) return null
 
+      // Percentage relative to PLAYED games
       const percentage = totalGames > 0 ? Math.round((presentCount / totalGames) * 100) : 0
 
       // Find last match
@@ -211,11 +252,12 @@ export async function getDashboardStats(req: Request, res: Response) {
     })
 
   const result = {
-    summary: { totalGames, wins, draws, losses, goalsFor, goalsAgainst, winRate },
-    lastMatches,
+    ...responseBase,
     attendance: attendanceList,
     topScorers,
   }
+
+  cache.set(cacheKey, result)
 
   return res.json(result)
 }

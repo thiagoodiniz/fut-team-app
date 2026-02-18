@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
-import { cache } from '../../lib/cache'
 import { upsertPresencesSchema } from './presences.schemas'
+import { invalidateCache } from '../../middlewares/cache'
 
 async function getActiveSeasonId(teamId: string) {
   const season = await prisma.season.findFirst({
@@ -113,7 +113,6 @@ export async function upsertMatchPresences(req: Request, res: Response) {
     orderBy: [{ player: { name: 'asc' } }],
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
   invalidateCache(teamId)
 
   return res.json({ presences })
