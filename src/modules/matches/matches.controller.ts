@@ -29,6 +29,10 @@ export async function listMatches(req: Request, res: Response) {
   const matches = await prisma.match.findMany({
     where: { teamId, seasonId },
     orderBy: [{ date: 'desc' }],
+    include: {
+      goals: { include: { player: true } },
+      presences: { where: { present: true }, include: { player: true } },
+    },
   })
 
   return res.json({ matches })

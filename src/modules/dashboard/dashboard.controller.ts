@@ -208,6 +208,7 @@ export async function getDashboardStats(req: Request, res: Response) {
             opponent: lastGoalMatch.opponent,
           }
           : null,
+        matchesPlayed: allPresences.filter((p) => p.playerId === sp.playerId).length,
       }
     })
     .filter(Boolean)
