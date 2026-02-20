@@ -1,5 +1,17 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
+import { Prisma } from '@prisma/client'
+
+interface MatchWithPresence {
+  id: string
+  date: Date
+  location: string | null
+  opponent: string | null
+  ourScore: number
+  theirScore: number
+  goals: (Prisma.GoalGetPayload<{ include: { player: true } }>)[]
+  presences: { present: boolean }[]
+}
 import { cache } from '../../lib/cache'
 import { createPlayerSchema, updatePlayerSchema } from './players.schemas'
 
@@ -281,7 +293,7 @@ export async function getPlayerPresenceMatches(req: Request, res: Response) {
     })
   }
 
-  const matches = await prisma.match.findMany({
+  const matches: MatchWithPresence[] = await prisma.match.findMany({
     where: { teamId, seasonId: resolvedSeasonId },
     orderBy: { date: 'desc' },
     include: {

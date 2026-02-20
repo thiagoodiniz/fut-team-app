@@ -1,6 +1,18 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
 import { cache } from '../../lib/cache'
+import { Prisma } from '@prisma/client'
+
+type MatchWithStats = Prisma.MatchGetPayload<{
+  include: {
+    goals: {
+      include: { player: true },
+    },
+    _count: {
+      select: { presences: true }
+    }
+  },
+}>
 
 export async function getDashboardStats(req: Request, res: Response) {
   const { teamId } = req.auth!
@@ -43,7 +55,7 @@ export async function getDashboardStats(req: Request, res: Response) {
   }
 
   // 1. Fetch ALL matches for the season to process stats
-  const matches = await prisma.match.findMany({
+  const matches: MatchWithStats[] = await prisma.match.findMany({
     where: { teamId, seasonId },
     orderBy: { date: 'desc' },
     include: {
@@ -179,8 +191,8 @@ export async function getDashboardStats(req: Request, res: Response) {
       })
 
       // Streak and last goal
-      sortedMatchesAsc.forEach((m) => {
-        const matchGoals = playerGoals.filter((g) => g.matchId === m.id)
+      for (const m of sortedMatchesAsc) {
+        const matchGoals = playerGoals.filter((g: { matchId: string }) => g.matchId === m.id)
         if (matchGoals.length > 0) {
           currentStreak++
           lastGoalMatch = m
@@ -188,7 +200,7 @@ export async function getDashboardStats(req: Request, res: Response) {
           currentStreak = 0
         }
         if (currentStreak > maxStreak) maxStreak = currentStreak
-      })
+      }
 
       return {
         id: sp.playerId,

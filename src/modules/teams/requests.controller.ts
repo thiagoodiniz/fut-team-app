@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
 import { z } from 'zod'
+import { TeamRole } from '@prisma/client'
 
 export async function searchTeams(req: Request, res: Response) {
     const query = req.query.q as string
@@ -128,7 +129,7 @@ export async function respondToRequest(req: Request, res: Response) {
             data: {
                 userId: joinRequest.userId,
                 teamId: joinRequest.teamId,
-                role: role as any,
+                role: role as TeamRole,
             },
         }),
     ])
