@@ -107,13 +107,7 @@ export async function upsertMatchPresences(req: Request, res: Response) {
     )
   )
 
-  const presences = await prisma.presence.findMany({
-    where: { matchId },
-    include: { player: true },
-    orderBy: [{ player: { name: 'asc' } }],
-  })
-
   invalidateCache(teamId)
 
-  return res.json({ presences })
+  return res.json({ success: true })
 }
