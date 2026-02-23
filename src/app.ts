@@ -1,25 +1,12 @@
-import 'dotenv/config'
-import * as Sentry from '@sentry/node'
-import { nodeProfilingIntegration } from '@sentry/profiling-node'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import * as Sentry from '@sentry/node'
 import { routes } from './routes'
 import { requestLogger } from './middlewares/requestLogger'
 import { requestId } from './middlewares/requestId'
 import { errorMiddleware } from './middlewares/error'
 import { swaggerUi, swaggerSpec } from './lib/swagger'
-
-if (process.env.SENTRY_DSN) {
-    Sentry.init({
-        dsn: process.env.SENTRY_DSN,
-        integrations: [
-            nodeProfilingIntegration(),
-        ],
-        tracesSampleRate: 1.0,
-        profilesSampleRate: 1.0,
-    })
-}
 
 export const app = express()
 

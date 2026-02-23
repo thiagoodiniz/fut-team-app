@@ -11,14 +11,11 @@ services:
     run:
       command: npm start
     ports:
-      - port: 3333
+      - port: 8000
         protocol: http
-    health_checks:
-      - tcp:
-          port: 3333
     env:
       - key: PORT
-        value: "3333"
+        value: "8000"
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
