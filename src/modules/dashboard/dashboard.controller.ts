@@ -266,8 +266,8 @@ export async function getDashboardStats(req: Request, res: Response) {
 
   const result = {
     ...responseBase,
-    attendance: attendanceList.slice(0, 5),
-    topScorers: topScorers.slice(0, 5),
+    attendance: attendanceList,
+    topScorers: topScorers,
   }
 
   cache.set(cacheKey, result)
