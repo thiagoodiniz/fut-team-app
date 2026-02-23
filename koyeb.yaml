@@ -13,6 +13,9 @@ services:
     ports:
       - port: 3333
         protocol: http
+    health_checks:
+      - tcp:
+          port: 3333
     env:
       - key: PORT
         value: "3333"
