@@ -1,0 +1,32 @@
+name: fut-team-api
+services:
+  - name: api
+    type: web
+    image: node:18-alpine
+    regions:
+      - was
+    instance_type: nano
+    build:
+      command: npm install && npm run prisma:generate && npm run build
+    run:
+      command: npm start
+    ports:
+      - port: 3333
+        protocol: http
+    env:
+      - key: PORT
+        value: "3333"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: "{{ secret.DATABASE_URL }}"
+      - key: JWT_SECRET
+        value: "{{ secret.JWT_SECRET }}"
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: GOOGLE_CLIENT_ID
+        value: "{{ secret.GOOGLE_CLIENT_ID }}"
+      - key: SENTRY_DSN
+        value: "{{ secret.SENTRY_DSN }}"
+      - key: LOGTAIL_SOURCE_TOKEN
+        value: "{{ secret.LOGTAIL_SOURCE_TOKEN }}"
