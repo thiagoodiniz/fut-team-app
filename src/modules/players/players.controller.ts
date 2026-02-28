@@ -20,13 +20,40 @@ export async function listPlayers(req: Request, res: Response) {
   const seasonId = req.query.seasonId as string | undefined
 
   if (seasonId) {
-    const seasonPlayers = await prisma.seasonPlayer.findMany({
-      where: { seasonId },
-      include: { player: true },
-      orderBy: [{ player: { name: 'asc' } }],
+    const players = await prisma.player.findMany({
+      where: {
+        teamId,
+        OR: [
+          { active: true },
+          {
+            presences: {
+              some: {
+                match: { seasonId },
+                present: true,
+              },
+            },
+          },
+          {
+            goals: {
+              some: {
+                match: { seasonId },
+                ownGoal: false,
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        _count: {
+          select: {
+            presences: { where: { match: { seasonId }, present: true } },
+            goals: { where: { match: { seasonId }, ownGoal: false } },
+          },
+        },
+      },
+      orderBy: [{ name: 'asc' }],
     })
 
-    const players = seasonPlayers.map((sp) => sp.player)
     return res.json({ players })
   }
 

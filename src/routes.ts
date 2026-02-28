@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { authMiddleware } from './middlewares/auth'
-import { adminMiddleware } from './middlewares/rbac'
+import { adminMiddleware, managerMiddleware } from './middlewares/rbac'
 import { cacheMiddleware } from './middlewares/cache'
 import { register, login, googleLogin } from './modules/auth/auth.controller'
 import {
@@ -51,6 +51,9 @@ import {
   listTeamMembers,
   updateMemberRole,
   removeMember,
+  joinTeamDirectly,
+  selectTeam,
+  createTeam,
 } from './modules/teams/requests.controller'
 
 /**
@@ -100,6 +103,11 @@ routes.use('/dashboard', authMiddleware, cacheMiddleware(300), dashboardRoutes)
  *       200: { description: Team details }
  */
 routes.get('/teams/active', authMiddleware, cacheMiddleware(600), getTeam)
+
+/**
+ * POST /teams - Create a new team (Manager only)
+ */
+routes.post('/teams', authMiddleware, managerMiddleware, createTeam)
 
 /**
  * @swagger
@@ -158,6 +166,8 @@ routes.get('/teams/search', authMiddleware, searchTeams)
  *       201: { description: Join request created }
  */
 routes.post('/teams/join', authMiddleware, createJoinRequest)
+routes.post('/teams/join-direct', authMiddleware, joinTeamDirectly)
+routes.post('/teams/select', authMiddleware, selectTeam)
 
 /**
  * @swagger

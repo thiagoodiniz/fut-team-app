@@ -1,11 +1,19 @@
 import type { NextFunction, Request, Response } from 'express'
 
 export function adminMiddleware(req: Request, res: Response, next: NextFunction) {
-    const role = req.auth?.role
+    const { role, isManager } = req.auth ?? {}
 
-    if (role !== 'OWNER' && role !== 'ADMIN') {
-        return res.status(403).json({ error: 'FORBIDDEN_ONLY_ADMINS_CAN_MUTATE' })
+    if (isManager || role === 'ADMIN') {
+        return next()
     }
 
-    return next()
+    return res.status(403).json({ error: 'FORBIDDEN_ONLY_ADMINS_CAN_MUTATE' })
+}
+
+export function managerMiddleware(req: Request, res: Response, next: NextFunction) {
+    if (req.auth?.isManager) {
+        return next()
+    }
+
+    return res.status(403).json({ error: 'FORBIDDEN_ONLY_MANAGERS' })
 }

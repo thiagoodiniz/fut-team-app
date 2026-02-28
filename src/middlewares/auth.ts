@@ -4,8 +4,9 @@ import process from 'process'
 
 type JwtPayload = {
   userId: string
-  teamId: string
-  role: 'OWNER' | 'ADMIN' | 'MEMBER'
+  teamId?: string
+  role?: 'ADMIN' | 'MEMBER'
+  isManager?: boolean
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {

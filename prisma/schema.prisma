@@ -7,7 +7,6 @@ datasource db {
 }
 
 enum TeamRole {
-  OWNER
   ADMIN
   MEMBER
 }
@@ -32,9 +31,13 @@ model User {
 
   isActive Boolean @default(true)
 
+  isManager Boolean @default(false)
+
   teams    UserTeam[]
   accounts OAuthAccount[]
   joinRequests JoinRequest[]
+
+  lastTeamId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

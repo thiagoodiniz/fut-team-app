@@ -8,8 +8,6 @@ import { registerSchema, loginSchema, googleLoginSchema } from './auth.schemas'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
-const TAPA_JEGS_TEAM_ID = '95be632b-40d7-45da-a934-f6ae239e7a13'
-
 export async function register(req: Request, res: Response) {
   const { name, email, password } = registerSchema.parse(req.body)
 
@@ -25,12 +23,6 @@ export async function register(req: Request, res: Response) {
       name,
       email,
       password: hashedPassword,
-      teams: {
-        create: {
-          teamId: TAPA_JEGS_TEAM_ID,
-          role: 'MEMBER',
-        },
-      },
     },
     include: {
       teams: {
@@ -39,27 +31,15 @@ export async function register(req: Request, res: Response) {
     },
   })
 
-  const userTeam = user.teams[0]
-
-  const token = jwt.sign(
-    { userId: user.id, teamId: userTeam.team.id, role: userTeam.role },
-    process.env.JWT_SECRET!,
-    { expiresIn: '7d' }
-  )
-
+  // Since it's a new user, they have no team yet. Redirect to onboarding.
   return res.json({
-    token,
     user: {
       id: user.id,
       name: user.name,
       email: user.email,
     },
-    team: {
-      id: userTeam.team.id,
-      name: userTeam.team.name,
-      slug: userTeam.team.slug,
-      role: userTeam.role,
-    },
+    token: jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' }),
+    onboarding: true,
   })
 }
 
@@ -75,7 +55,7 @@ export async function login(req: Request, res: Response) {
         include: { team: true },
       },
     },
-  })
+  }) as (typeof user & { lastTeamId?: string | null }) | null
 
   if (!user || !user.password) {
     return res.status(401).json({ error: 'INVALID_CREDENTIALS' })
@@ -86,14 +66,24 @@ export async function login(req: Request, res: Response) {
     return res.status(401).json({ error: 'INVALID_CREDENTIALS' })
   }
 
-  const userTeam = user.teams[0]
+  let targetTeam = null
 
-  if (!userTeam) {
-    // If somehow a legacy user has no team (shouldn't happen with new auto-linking)
-    const pendingRequest = user.joinRequests[0]
+  if (user.lastTeamId) {
+    targetTeam = user.teams.find((ut) => ut.teamId === user.lastTeamId)
+  }
 
+  if (!targetTeam && user.teams.length > 0) {
+    targetTeam = user.teams[0]
+    // Update lastTeamId asynchronously
+    prisma.user.update({
+      where: { id: user.id },
+      data: { lastTeamId: targetTeam.teamId }
+    }).catch(console.error)
+  }
+
+  if (!targetTeam) {
     return res.json({
-      token: jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' }),
+      token: jwt.sign({ userId: user.id, isManager: user.isManager }, process.env.JWT_SECRET!, { expiresIn: '7d' }),
       user: {
         id: user.id,
         name: user.name,
@@ -101,23 +91,18 @@ export async function login(req: Request, res: Response) {
         avatarUrl: user.avatarUrl,
       },
       onboarding: true,
-      pendingRequest: pendingRequest
-        ? {
-          teamName: pendingRequest.team.name,
-          createdAt: pendingRequest.createdAt,
-        }
-        : null,
     })
   }
 
   const token = jwt.sign(
-    { userId: user.id, teamId: userTeam.team.id, role: userTeam.role },
+    { userId: user.id, teamId: targetTeam.team.id, role: targetTeam.role, isManager: user.isManager },
     process.env.JWT_SECRET!,
     { expiresIn: '7d' }
   )
 
   return res.json({
     token,
+    isManager: user.isManager,
     user: {
       id: user.id,
       name: user.name,
@@ -125,10 +110,10 @@ export async function login(req: Request, res: Response) {
       avatarUrl: user.avatarUrl,
     },
     team: {
-      id: userTeam.team.id,
-      name: userTeam.team.name,
-      slug: userTeam.team.slug,
-      role: userTeam.role,
+      id: targetTeam.team.id,
+      name: targetTeam.team.name,
+      slug: targetTeam.team.slug,
+      role: targetTeam.role,
     },
   })
 }
@@ -169,12 +154,6 @@ export async function googleLogin(req: Request, res: Response) {
           email,
           name: name || '',
           avatarUrl: picture,
-          teams: {
-            create: {
-              teamId: TAPA_JEGS_TEAM_ID,
-              role: 'MEMBER',
-            },
-          },
         },
         include: {
           teams: { include: { team: true } },
@@ -185,14 +164,24 @@ export async function googleLogin(req: Request, res: Response) {
       })
     }
 
-    const userTeam = user.teams[0]
+    let targetTeam = null
 
-    if (!userTeam) {
-      // Legacy user or fallback
-      const pendingRequest = user.joinRequests[0]
+    if (user.lastTeamId) {
+      targetTeam = user.teams.find((ut) => ut.teamId === user.lastTeamId)
+    }
 
+    if (!targetTeam && user.teams.length > 0) {
+      targetTeam = user.teams[0]
+      // Update lastTeamId asynchronously
+      prisma.user.update({
+        where: { id: user.id },
+        data: { lastTeamId: targetTeam.teamId }
+      }).catch(console.error)
+    }
+
+    if (!targetTeam) {
       return res.json({
-        token: jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' }),
+        token: jwt.sign({ userId: user.id, isManager: user.isManager }, process.env.JWT_SECRET!, { expiresIn: '7d' }),
         user: {
           id: user.id,
           name: user.name,
@@ -200,17 +189,11 @@ export async function googleLogin(req: Request, res: Response) {
           avatarUrl: user.avatarUrl,
         },
         onboarding: true,
-        pendingRequest: pendingRequest
-          ? {
-            teamName: pendingRequest.team.name,
-            createdAt: pendingRequest.createdAt,
-          }
-          : null,
       })
     }
 
     const token = jwt.sign(
-      { userId: user.id, teamId: userTeam.team.id, role: userTeam.role },
+      { userId: user.id, teamId: targetTeam.team.id, role: targetTeam.role, isManager: user.isManager },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     )
@@ -224,10 +207,10 @@ export async function googleLogin(req: Request, res: Response) {
         avatarUrl: user.avatarUrl,
       },
       team: {
-        id: userTeam.team.id,
-        name: userTeam.team.name,
-        slug: userTeam.team.slug,
-        role: userTeam.role,
+        id: targetTeam.team.id,
+        name: targetTeam.team.name,
+        slug: targetTeam.team.slug,
+        role: targetTeam.role,
       },
     })
   } catch (error) {

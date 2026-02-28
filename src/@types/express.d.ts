@@ -6,8 +6,9 @@ declare global {
       requestId?: string
       auth?: {
         userId: string
-        teamId: string
-        role: 'OWNER' | 'ADMIN' | 'MEMBER'
+        teamId?: string
+        role?: 'ADMIN' | 'MEMBER'
+        isManager?: boolean
       }
     }
   }

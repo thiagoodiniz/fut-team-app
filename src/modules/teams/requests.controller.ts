@@ -6,25 +6,22 @@ import { TeamRole } from '@prisma/client'
 export async function searchTeams(req: Request, res: Response) {
     const query = req.query.q as string
 
-    if (!query || query.length < 2) {
-        return res.json({ teams: [] })
-    }
-
     const teams = await prisma.team.findMany({
-        where: {
+        where: query && query.length >= 2 ? {
             OR: [
                 { name: { contains: query, mode: 'insensitive' } },
                 { slug: { contains: query, mode: 'insensitive' } },
             ],
             isActive: true,
-        },
+        } : { isActive: true },
         select: {
             id: true,
             name: true,
             slug: true,
             logo: true,
         },
-        take: 10,
+        take: 20,
+        orderBy: { name: 'asc' }
     })
 
     return res.json({ teams })
@@ -162,16 +159,13 @@ export async function listTeamMembers(req: Request, res: Response) {
 }
 
 const updateMemberSchema = z.object({
-    role: z.enum(['OWNER', 'ADMIN', 'MEMBER']),
+    role: z.enum(['ADMIN', 'MEMBER']),
 })
 
 export async function updateMemberRole(req: Request, res: Response) {
     const { teamId } = req.auth!
     const { userId } = req.params
     const { role } = updateMemberSchema.parse(req.body)
-
-    // Ensure we don't leave the team without an owner if possible
-    // (Simplification: just allow owners/admins to change roles)
 
     await prisma.userTeam.update({
         where: { userId_teamId: { userId: userId as string, teamId: teamId as string } },
@@ -196,4 +190,189 @@ export async function removeMember(req: Request, res: Response) {
     invalidateCache(teamId)
 
     return res.json({ success: true })
+}
+
+export async function joinTeamDirectly(req: Request, res: Response) {
+    const { userId } = req.auth!
+    const { teamId } = req.body
+
+    if (!teamId) {
+        return res.status(400).json({ error: 'TEAM_ID_REQUIRED' })
+    }
+
+    // Check if already in the team
+    const existingMembership = await prisma.userTeam.findUnique({
+        where: { userId_teamId: { userId, teamId } },
+    })
+
+    const jwt = require('jsonwebtoken')
+    const process = require('process')
+
+    if (existingMembership) {
+        // Already a member — just update lastTeamId and return a fresh token
+        await (prisma.user.update as any)({
+            where: { id: userId },
+            data: { lastTeamId: teamId }
+        })
+
+        const user = await prisma.user.findUnique({ where: { id: userId } })
+        const team = await prisma.team.findUnique({ where: { id: teamId }, select: { id: true, name: true, slug: true } })
+
+        const token = jwt.sign(
+            { userId, teamId, role: existingMembership.role, isManager: (user as any)?.isManager ?? false },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        )
+
+        return res.json({
+            success: true,
+            token,
+            teamId,
+            team,
+            role: existingMembership.role,
+            userId,
+            isManager: (user as any)?.isManager ?? false
+        })
+    }
+
+    // New membership — direct join as MEMBER
+    await prisma.$transaction([
+        prisma.userTeam.create({
+            data: {
+                userId,
+                teamId,
+                role: 'MEMBER',
+            }
+        }),
+        (prisma.user.update as any)({
+            where: { id: userId },
+            data: { lastTeamId: teamId }
+        })
+    ])
+
+    // Fetch user to get isManager
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    const team = await prisma.team.findUnique({ where: { id: teamId }, select: { id: true, name: true, slug: true } })
+
+    const token = jwt.sign(
+        { userId, teamId, role: 'MEMBER', isManager: (user as any)?.isManager ?? false },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+    )
+
+    return res.json({
+        success: true,
+        token,
+        teamId,
+        team,
+        role: 'MEMBER',
+        userId,
+        isManager: (user as any)?.isManager ?? false
+    })
+}
+
+export async function selectTeam(req: Request, res: Response) {
+    const { userId } = req.auth!
+    const { teamId } = req.body
+
+    if (!teamId) {
+        return res.status(400).json({ error: 'TEAM_ID_REQUIRED' })
+    }
+
+    const membership = await prisma.userTeam.findUnique({
+        where: { userId_teamId: { userId, teamId } }
+    })
+
+    if (!membership) {
+        return res.status(403).json({ error: 'NOT_A_MEMBER' })
+    }
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: { lastTeamId: teamId }
+    })
+
+    return res.json({ success: true })
+}
+
+const createTeamSchema = z.object({
+    name: z.string().min(2),
+    slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
+})
+
+export async function createTeam(req: Request, res: Response) {
+    const { userId } = req.auth!
+    const { name, slug } = createTeamSchema.parse(req.body)
+
+    const existing = await prisma.team.findUnique({ where: { slug } })
+    if (existing) {
+        return res.status(400).json({ error: 'SLUG_ALREADY_EXISTS' })
+    }
+
+    const currentYear = new Date().getFullYear()
+
+    const team = await prisma.$transaction(async (tx) => {
+        // 1. Create Team and Admin User
+        const newTeam = await tx.team.create({
+            data: {
+                name,
+                slug,
+                users: {
+                    create: {
+                        userId,
+                        role: 'ADMIN',
+                    }
+                }
+            },
+        })
+
+        // 2. Create Initial Season
+        await tx.season.create({
+            data: {
+                teamId: newTeam.id,
+                year: currentYear,
+                name: `Temporada ${currentYear}`,
+                isActive: true,
+            }
+        })
+
+        // 3. Update lastTeamId for the manager
+        await (tx.user.update as any)({
+            where: { id: userId },
+            data: { lastTeamId: newTeam.id },
+        })
+
+        return newTeam
+    })
+
+    const jwt = require('jsonwebtoken')
+    const process = require('process')
+
+    // Fetch user to get isManager status
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+
+    const token = jwt.sign(
+        {
+            userId,
+            teamId: team.id,
+            role: 'ADMIN',
+            isManager: (user as any)?.isManager ?? false
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+    )
+
+    return res.status(201).json({
+        success: true,
+        token,
+        teamId: team.id,
+        team: {
+            id: team.id,
+            name: team.name,
+            slug: team.slug,
+            role: 'ADMIN'
+        },
+        userId,
+        isManager: (user as any)?.isManager ?? false
+    })
 }
