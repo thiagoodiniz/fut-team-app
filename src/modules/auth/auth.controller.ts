@@ -55,7 +55,7 @@ export async function login(req: Request, res: Response) {
         include: { team: true },
       },
     },
-  }) as (typeof user & { lastTeamId?: string | null }) | null
+  })
 
   if (!user || !user.password) {
     return res.status(401).json({ error: 'INVALID_CREDENTIALS' })
@@ -69,7 +69,7 @@ export async function login(req: Request, res: Response) {
   let targetTeam = null
 
   if (user.lastTeamId) {
-    targetTeam = user.teams.find((ut) => ut.teamId === user.lastTeamId)
+    targetTeam = user.teams.find((ut: any) => ut.teamId === user.lastTeamId)
   }
 
   if (!targetTeam && user.teams.length > 0) {

@@ -56,13 +56,13 @@ export async function upsertMatchPresences(req: Request, res: Response) {
   const matchId = req.params.id as string
   const body = upsertPresencesSchema.parse(req.body)
 
-  const seasonId = await getActiveSeasonId(teamId)
+  const seasonId = await getActiveSeasonId(teamId as string)
   if (!seasonId) {
     return res.status(400).json({ error: 'NO_ACTIVE_SEASON' })
   }
 
   const match = await prisma.match.findFirst({
-    where: { id: matchId, teamId, seasonId },
+    where: { id: matchId, teamId: teamId as string, seasonId: seasonId as string },
     select: { id: true },
   })
 
@@ -107,7 +107,7 @@ export async function upsertMatchPresences(req: Request, res: Response) {
     )
   )
 
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.json({ success: true })
 }

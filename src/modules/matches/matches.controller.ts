@@ -19,7 +19,7 @@ export async function listMatches(req: Request, res: Response) {
   let seasonId = querySeasonId
 
   if (!seasonId) {
-    seasonId = (await getActiveSeasonId(teamId)) ?? undefined
+    seasonId = (await getActiveSeasonId(teamId as string)) || undefined
   }
 
   if (!seasonId) {
@@ -27,7 +27,7 @@ export async function listMatches(req: Request, res: Response) {
   }
 
   const matches = await prisma.match.findMany({
-    where: { teamId, seasonId },
+    where: { teamId, seasonId: seasonId as string },
     orderBy: [{ date: 'desc' }],
     include: {
       goals: { include: { player: true } },
@@ -42,13 +42,13 @@ export async function getMatchById(req: Request, res: Response) {
   const { teamId } = req.auth!
   const matchId = req.params.id as string
 
-  const seasonId = await getActiveSeasonId(teamId)
+  const seasonId = await getActiveSeasonId(teamId as string)
   if (!seasonId) {
     return res.status(400).json({ error: 'NO_ACTIVE_SEASON' })
   }
 
   const match = await prisma.match.findFirst({
-    where: { id: matchId, teamId, seasonId },
+    where: { id: matchId, teamId: teamId as string, seasonId: seasonId as string },
   })
 
   if (!match) {
@@ -62,15 +62,15 @@ export async function createMatch(req: Request, res: Response) {
   const { teamId } = req.auth!
   const body = createMatchSchema.parse(req.body)
 
-  const seasonId = await getActiveSeasonId(teamId)
+  const seasonId = await getActiveSeasonId(teamId as string)
   if (!seasonId) {
     return res.status(400).json({ error: 'NO_ACTIVE_SEASON' })
   }
 
   const match = await prisma.match.create({
     data: {
-      teamId,
-      seasonId,
+      teamId: teamId as string,
+      seasonId: seasonId as string,
       date: new Date(body.date),
       location: body.location,
       opponent: body.opponent,
@@ -91,13 +91,13 @@ export async function updateMatch(req: Request, res: Response) {
   const matchId = req.params.id as string
   const body = updateMatchSchema.parse(req.body)
 
-  const seasonId = await getActiveSeasonId(teamId)
+  const seasonId = await getActiveSeasonId(teamId as string)
   if (!seasonId) {
     return res.status(400).json({ error: 'NO_ACTIVE_SEASON' })
   }
 
   const exists = await prisma.match.findFirst({
-    where: { id: matchId, teamId, seasonId },
+    where: { id: matchId, teamId: teamId as string, seasonId: seasonId as string },
     select: { id: true },
   })
 
@@ -127,13 +127,13 @@ export async function deleteMatch(req: Request, res: Response) {
   const { teamId } = req.auth!
   const matchId = req.params.id as string
 
-  const seasonId = await getActiveSeasonId(teamId)
+  const seasonId = await getActiveSeasonId(teamId as string)
   if (!seasonId) {
     return res.status(400).json({ error: 'NO_ACTIVE_SEASON' })
   }
 
   const exists = await prisma.match.findFirst({
-    where: { id: matchId, teamId, seasonId },
+    where: { id: matchId, teamId: teamId as string, seasonId: seasonId as string },
     select: { id: true },
   })
 

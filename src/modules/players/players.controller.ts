@@ -71,7 +71,7 @@ export async function createPlayer(req: Request, res: Response) {
 
   const player = await prisma.player.create({
     data: {
-      teamId,
+      teamId: teamId as string,
       name: body.name,
       nickname: body.nickname,
       position: body.position,

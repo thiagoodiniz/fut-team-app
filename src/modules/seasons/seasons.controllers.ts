@@ -41,7 +41,7 @@ export async function createSeason(req: Request, res: Response) {
 
   const season = await prisma.season.create({
     data: {
-      teamId,
+      teamId: teamId as string,
       year: body.year,
       name: body.name,
       isActive: body.isActive ?? false,
