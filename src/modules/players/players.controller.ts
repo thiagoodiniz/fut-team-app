@@ -11,8 +11,8 @@ interface MatchWithPresence {
   theirScore: number
   goals: (Prisma.GoalGetPayload<{ include: { player: true } }>)[]
   presences: { present: boolean }[]
+  loanedPlayers: string[]
 }
-import { cache } from '../../lib/cache'
 import { createPlayerSchema, updatePlayerSchema } from './players.schemas'
 
 export async function listPlayers(req: Request, res: Response) {
@@ -355,7 +355,7 @@ export async function getPlayerPresenceMatches(req: Request, res: Response) {
     opponent: m.opponent ?? 'Sem adversario',
     ourScore: m.ourScore,
     theirScore: m.theirScore,
-    present: playerId.startsWith('loaned:') 
+    present: playerId.startsWith('loaned:')
       ? m.loanedPlayers.includes(playerId.replace('loaned:', ''))
       : m.presences[0]?.present === true,
     scorers: m.goals
