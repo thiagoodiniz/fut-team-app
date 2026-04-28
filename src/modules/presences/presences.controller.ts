@@ -35,18 +35,20 @@ export async function listMatchPresences(req: Request, res: Response) {
     where: { matchId },
   })
 
-  const result = seasonPlayers.map((sp) => {
-    const presence = presences.find((p) => p.playerId === sp.playerId)
+  const result = seasonPlayers
+    .map((sp) => {
+      const presence = presences.find((p) => p.playerId === sp.playerId)
 
-    return {
-      id: presence?.id ?? undefined,
-      matchId,
-      playerId: sp.playerId,
-      present: presence?.present ?? false,
-      createdAt: presence?.createdAt ?? undefined,
-      player: sp.player,
-    }
-  })
+      return {
+        id: presence?.id ?? undefined,
+        matchId,
+        playerId: sp.playerId,
+        present: presence?.present ?? false,
+        createdAt: presence?.createdAt ?? undefined,
+        player: sp.player,
+      }
+    })
+    .filter((p) => p.player.active || p.present)
 
   return res.json({ presences: result })
 }
