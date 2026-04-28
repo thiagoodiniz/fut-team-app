@@ -194,6 +194,8 @@ model Match {
   goals     Goal[]
   presences Presence[]
 
+  loanedPlayers String[] @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -207,6 +209,7 @@ model Goal {
   id       String @id @default(uuid())
   matchId  String
   playerId String?
+  loanedPlayerName String?
 
   minute  Int?
   ownGoal Boolean @default(false)

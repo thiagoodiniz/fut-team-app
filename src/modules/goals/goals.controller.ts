@@ -59,7 +59,7 @@ export async function createMatchGoal(req: Request, res: Response) {
   }
 
   const hasNonOwnGoals = body.goals.some((g) => !g.ownGoal)
-  if (hasNonOwnGoals && !body.playerId) {
+  if (hasNonOwnGoals && !body.playerId && !body.loanedPlayerName) {
     return res.status(400).json({ error: 'PLAYER_REQUIRED_FOR_NON_OWN_GOALS' })
   }
 
@@ -91,6 +91,7 @@ export async function createMatchGoal(req: Request, res: Response) {
   const goalsData = body.goals.map((g) => ({
     matchId,
     playerId: g.ownGoal ? null : (body.playerId ?? null),
+    loanedPlayerName: g.ownGoal ? null : (body.loanedPlayerName ?? null),
     minute: g.minute ?? undefined,
     ownGoal: g.ownGoal ?? false,
     freeKick: g.ownGoal ? false : (g.freeKick ?? false),

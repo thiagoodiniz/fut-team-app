@@ -77,6 +77,7 @@ export async function createMatch(req: Request, res: Response) {
       notes: body.notes,
       ourScore: body.ourScore ?? 0,
       theirScore: body.theirScore ?? 0,
+      loanedPlayers: body.loanedPlayers ?? [],
     },
   })
 
@@ -114,6 +115,7 @@ export async function updateMatch(req: Request, res: Response) {
       ...(body.notes !== undefined ? { notes: body.notes } : {}),
       ...(body.ourScore !== undefined ? { ourScore: body.ourScore } : {}),
       ...(body.theirScore !== undefined ? { theirScore: body.theirScore } : {}),
+      ...(body.loanedPlayers !== undefined ? { loanedPlayers: body.loanedPlayers } : {}),
     },
   })
 

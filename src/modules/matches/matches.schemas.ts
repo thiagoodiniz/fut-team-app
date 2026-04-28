@@ -7,6 +7,7 @@ export const createMatchSchema = z.object({
   notes: z.string().optional().nullable(),
   ourScore: z.number().int().min(0).max(99).optional(),
   theirScore: z.number().int().min(0).max(99).optional(),
+  loanedPlayers: z.array(z.string()).optional(),
 })
 
 export const updateMatchSchema = z.object({
@@ -16,4 +17,5 @@ export const updateMatchSchema = z.object({
   notes: z.string().nullable().optional(),
   ourScore: z.number().int().min(0).max(99).optional(),
   theirScore: z.number().int().min(0).max(99).optional(),
+  loanedPlayers: z.array(z.string()).optional(),
 })

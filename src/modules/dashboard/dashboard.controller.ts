@@ -119,8 +119,8 @@ export async function getDashboardStats(req: Request, res: Response) {
     theirScore: m.theirScore,
     result: m.ourScore > m.theirScore ? 'WIN' : m.ourScore < m.theirScore ? 'LOSS' : 'DRAW',
     scorers: m.goals
-      .filter((g) => !g.ownGoal && g.player)
-      .map((g) => g.player!.nickname || g.player!.name),
+      .filter((g) => !g.ownGoal && (g.player || g.loanedPlayerName))
+      .map((g) => g.player ? (g.player!.nickname || g.player!.name) : g.loanedPlayerName!),
   }))
 
   // 5. Detailed Data Retrieval (ONLY for playedMatches)
@@ -226,6 +226,57 @@ export async function getDashboardStats(req: Request, res: Response) {
     .filter(Boolean)
     .sort((a, b) => b!.goals - a!.goals)
 
+  // 6b. Process Loaned Top Scorers
+  const loanedGoals = allGoals.filter(g => g.loanedPlayerName && !g.ownGoal)
+  const loanedScorersMap = new Map<string, any>()
+
+  loanedGoals.forEach(g => {
+    const name = g.loanedPlayerName!
+    if (!loanedScorersMap.has(name)) {
+      loanedScorersMap.set(name, {
+        id: `loaned:${name}`,
+        name: name,
+        nickname: name,
+        photo: null,
+        goals: 0,
+        freeKickGoals: 0,
+        penaltyGoals: 0,
+        hatTricks: 0,
+        doubles: 0,
+        maxStreak: 0,
+        currentStreak: 0,
+        lastGoal: null,
+        matchesPlayed: 0,
+        isLoaned: true
+      })
+    }
+    const scorer = loanedScorersMap.get(name)
+    scorer.goals++
+    if (g.freeKick) scorer.freeKickGoals++
+    if (g.penalty) scorer.penaltyGoals++
+  })
+
+  // Calculate matches played for loaned players (from matches list)
+  loanedScorersMap.forEach((scorer, name) => {
+    scorer.matchesPlayed = playedMatches.filter(m => m.loanedPlayers.includes(name)).length
+    
+    // Simple last goal for loaned
+    const playerLoanedGoals = loanedGoals.filter(g => g.loanedPlayerName === name)
+    if (playerLoanedGoals.length > 0) {
+      const lastG = playerLoanedGoals[playerLoanedGoals.length - 1]
+      const match = matches.find(m => m.id === lastG.matchId)
+      if (match) {
+        scorer.lastGoal = {
+          date: match.date,
+          opponent: match.opponent
+        }
+      }
+    }
+  })
+
+  const allTopScorers = [...topScorers, ...Array.from(loanedScorersMap.values())]
+    .sort((a, b) => b.goals - a.goals)
+
   const attendanceList = allSeasonPlayers
     .map((sp) => {
       const playerPresences = allPresences.filter((p) => p.playerId === sp.playerId)
@@ -264,10 +315,49 @@ export async function getDashboardStats(req: Request, res: Response) {
       return a!.name.localeCompare(b!.name)
     })
 
+  // 6d. Process Loaned Attendance
+  const loanedAttendanceMap = new Map<string, any>()
+  playedMatches.forEach(m => {
+    m.loanedPlayers.forEach(name => {
+      if (!loanedAttendanceMap.has(name)) {
+        loanedAttendanceMap.set(name, {
+          id: `loaned:${name}`,
+          name: name,
+          nickname: name,
+          photo: null,
+          presentCount: 0,
+          percentage: 0,
+          lastMatch: null,
+          isLoaned: true
+        })
+      }
+      const att = loanedAttendanceMap.get(name)
+      att.presentCount++
+      
+      // Update last match if newer
+      if (!att.lastMatch || new Date(m.date) > new Date(att.lastMatch.date)) {
+        att.lastMatch = {
+          date: m.date,
+          opponent: m.opponent
+        }
+      }
+    })
+  })
+
+  loanedAttendanceMap.forEach(att => {
+    att.percentage = totalGames > 0 ? Math.round((att.presentCount / totalGames) * 100) : 0
+  })
+
+  const allAttendance = [...attendanceList, ...Array.from(loanedAttendanceMap.values())]
+    .sort((a, b) => {
+      if (b.percentage !== a.percentage) return b.percentage - a.percentage
+      return a.name.localeCompare(b.name)
+    })
+
   const result = {
     ...responseBase,
-    attendance: attendanceList,
-    topScorers: topScorers,
+    attendance: allAttendance,
+    topScorers: allTopScorers,
   }
 
   cache.set(cacheKey, result)

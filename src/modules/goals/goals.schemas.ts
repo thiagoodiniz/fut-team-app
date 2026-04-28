@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const createGoalSchema = z.object({
   playerId: z.string().uuid().optional().nullable(),
+  loanedPlayerName: z.string().optional().nullable(),
   goals: z
     .array(
       z.object({
