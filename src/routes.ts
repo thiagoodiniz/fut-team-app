@@ -103,6 +103,8 @@ routes.use('/dashboard', authMiddleware, cacheMiddleware(300), dashboardRoutes)
  *       200: { description: Team details }
  */
 routes.get('/teams/active', authMiddleware, cacheMiddleware(600), getTeam)
+import { getTeamStats } from './modules/teams/teamStats.controller'
+routes.get('/teams/active/stats', authMiddleware, cacheMiddleware(300), getTeamStats)
 
 /**
  * POST /teams - Create a new team (Manager only)
