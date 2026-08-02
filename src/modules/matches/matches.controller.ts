@@ -42,13 +42,8 @@ export async function getMatchById(req: Request, res: Response) {
   const { teamId } = req.auth!
   const matchId = req.params.id as string
 
-  const seasonId = await getActiveSeasonId(teamId as string)
-  if (!seasonId) {
-    return res.status(400).json({ error: 'NO_ACTIVE_SEASON' })
-  }
-
   const match = await prisma.match.findFirst({
-    where: { id: matchId, teamId: teamId as string, seasonId: seasonId as string },
+    where: { id: matchId, teamId: teamId as string },
   })
 
   if (!match) {
