@@ -78,24 +78,24 @@ export async function createMatchGoal(req: Request, res: Response) {
   const existingGoalsCount = await prisma.goal.count({
     where: { matchId, ownGoal: false },
   })
-  const newNonOwnGoals = body.goals.filter(g => !g.ownGoal).length
+  const newNonOwnGoals = body.goals.filter((g) => !g.ownGoal).length
   if (existingGoalsCount + newNonOwnGoals > match.ourScore) {
-    return res.status(400).json({ error: 'GOAL_LIMIT_EXCEEDED', message: 'Quantidade de gols excede o placar' })
+    return res
+      .status(400)
+      .json({ error: 'GOAL_LIMIT_EXCEEDED', message: 'Quantidade de gols excede o placar' })
   }
 
   const goalsData = body.goals.map((g) => ({
     matchId,
-    playerId: g.ownGoal ? null : (body.playerId ?? null),
-    loanedPlayerName: g.ownGoal ? null : (body.loanedPlayerName ?? null),
+    playerId: g.ownGoal ? null : body.playerId ?? null,
+    loanedPlayerName: g.ownGoal ? null : body.loanedPlayerName ?? null,
     minute: g.minute ?? undefined,
     ownGoal: g.ownGoal ?? false,
-    freeKick: g.ownGoal ? false : (g.freeKick ?? false),
-    penalty: g.ownGoal ? false : (g.penalty ?? false),
+    freeKick: g.ownGoal ? false : g.freeKick ?? false,
+    penalty: g.ownGoal ? false : g.penalty ?? false,
   }))
 
-  await prisma.$transaction(
-    goalsData.map((data) => prisma.goal.create({ data }))
-  )
+  await prisma.$transaction(goalsData.map((data) => prisma.goal.create({ data })))
 
   const goals = await prisma.goal.findMany({
     where: { matchId },

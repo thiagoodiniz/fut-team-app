@@ -11,6 +11,7 @@ import {
   getPlayerStats,
   listPlayers,
   updatePlayer,
+  getPlayerPhoto,
 } from './modules/players/players.controller'
 
 import {
@@ -42,7 +43,7 @@ import {
 } from './modules/seasonPlayers/seasonPlayers.controllers'
 
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes'
-import { getTeam, updateTeam } from './modules/teams/teams.controller'
+import { getTeam, updateTeam, getTeamLogo } from './modules/teams/teams.controller'
 import {
   createJoinRequest,
   listTeamRequests,
@@ -103,6 +104,7 @@ routes.use('/dashboard', authMiddleware, cacheMiddleware(300), dashboardRoutes)
  *       200: { description: Team details }
  */
 routes.get('/teams/active', authMiddleware, cacheMiddleware(600), getTeam)
+routes.get('/teams/:id/logo', authMiddleware, cacheMiddleware(86400), getTeamLogo)
 import { getTeamStats } from './modules/teams/teamStats.controller'
 routes.get('/teams/active/stats', authMiddleware, cacheMiddleware(300), getTeamStats)
 
@@ -348,6 +350,7 @@ routes.get('/me', authMiddleware, async (req: Request, res: Response) => {
  *       200: { description: List of players }
  */
 routes.get('/players', authMiddleware, cacheMiddleware(300), listPlayers)
+routes.get('/players/:id/photo', authMiddleware, cacheMiddleware(86400), getPlayerPhoto)
 
 /**
  * @swagger
@@ -366,7 +369,12 @@ routes.get('/players', authMiddleware, cacheMiddleware(300), listPlayers)
  */
 routes.get('/players/:id/stats', authMiddleware, cacheMiddleware(300), getPlayerStats)
 routes.get('/players/:id/goal-matches', authMiddleware, cacheMiddleware(300), getPlayerGoalMatches)
-routes.get('/players/:id/presence-matches', authMiddleware, cacheMiddleware(300), getPlayerPresenceMatches)
+routes.get(
+  '/players/:id/presence-matches',
+  authMiddleware,
+  cacheMiddleware(300),
+  getPlayerPresenceMatches,
+)
 
 /**
  * @swagger

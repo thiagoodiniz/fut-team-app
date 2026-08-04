@@ -9,22 +9,22 @@ export const logger = pino({
       ...(isProd
         ? []
         : [
-          {
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
-              translateTime: 'SYS:standard',
-              ignore: 'pid,hostname',
+            {
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+                translateTime: 'SYS:standard',
+                ignore: 'pid,hostname',
+              },
             },
-          },
-        ]),
+          ]),
       ...(process.env.LOGTAIL_SOURCE_TOKEN
         ? [
-          {
-            target: '@logtail/pino',
-            options: { sourceToken: process.env.LOGTAIL_SOURCE_TOKEN },
-          },
-        ]
+            {
+              target: '@logtail/pino',
+              options: { sourceToken: process.env.LOGTAIL_SOURCE_TOKEN },
+            },
+          ]
         : []),
     ],
   },

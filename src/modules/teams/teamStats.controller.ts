@@ -6,12 +6,12 @@ import { Prisma } from '@prisma/client'
 type MatchWithStats = Prisma.MatchGetPayload<{
   include: {
     goals: {
-      include: { player: true },
-    },
+      include: { player: { select: { id: true; name: true; nickname: true } } }
+    }
     _count: {
       select: { presences: true }
     }
-  },
+  }
 }>
 
 export async function getTeamStats(req: Request, res: Response) {
@@ -31,28 +31,28 @@ export async function getTeamStats(req: Request, res: Response) {
     include: {
       goals: {
         orderBy: { createdAt: 'asc' },
-        include: { player: true },
+        include: { player: { select: { id: true, name: true, nickname: true } } },
       },
       _count: {
-        select: { presences: { where: { present: true } } } // Count only PRESENT players
-      }
+        select: { presences: { where: { present: true } } }, // Count only PRESENT players
+      },
     },
   })
 
   // Filter matches that effectively happened (have at least one present player)
-  const playedMatches = matches.filter(m => m._count.presences > 0)
+  const playedMatches = matches.filter((m) => m._count.presences > 0)
 
   // Fetch all seasons for the team to determine minYear and maxYear
   const teamSeasons = await prisma.season.findMany({
     where: { teamId },
-    select: { year: true }
+    select: { year: true },
   })
 
   let minYear = new Date().getFullYear()
   let maxYear = minYear
 
   if (teamSeasons.length > 0) {
-    const years = teamSeasons.map(s => s.year)
+    const years = teamSeasons.map((s) => s.year)
     minYear = Math.min(...years)
     maxYear = Math.max(...years)
   }
@@ -98,23 +98,23 @@ export async function getTeamStats(req: Request, res: Response) {
       topAttendance: [],
       topOpponents: [],
       topScoringOpponents: [],
-      topConcedingOpponents: []
+      topConcedingOpponents: [],
     }
     return res.json(emptyResult)
   }
 
-  const matchIds = playedMatches.map(m => m.id)
+  const matchIds = playedMatches.map((m) => m.id)
 
   // Fetch all presences to calculate top attendance
   const allPresences = await prisma.presence.findMany({
     where: { matchId: { in: matchIds }, present: true },
-    include: { player: true },
+    include: { player: { select: { id: true, name: true, nickname: true } } },
   })
 
   // Calculate Top Scorers (only from played matches to be safe)
   const allGoals = await prisma.goal.findMany({
     where: { matchId: { in: matchIds } },
-    include: { player: true },
+    include: { player: { select: { id: true, name: true, nickname: true } } },
   })
 
   const scorersMap = new Map<string, any>()
@@ -128,8 +128,7 @@ export async function getTeamStats(req: Request, res: Response) {
           id: g.playerId,
           name: g.player?.name,
           nickname: g.player?.nickname,
-          photo: g.player?.photo,
-          goals: 0
+          goals: 0,
         })
       }
       scorersMap.get(g.playerId).goals++
@@ -140,8 +139,7 @@ export async function getTeamStats(req: Request, res: Response) {
           id: `loaned:${name}`,
           name: name,
           nickname: name,
-          photo: null,
-          goals: 0
+          goals: 0,
         })
       }
       scorersMap.get(`loaned:${name}`).goals++
@@ -160,8 +158,7 @@ export async function getTeamStats(req: Request, res: Response) {
         id: p.playerId,
         name: p.player?.name,
         nickname: p.player?.nickname,
-        photo: p.player?.photo,
-        matches: 0
+        matches: 0,
       })
     }
     attendanceMap.get(p.playerId).matches++
@@ -174,8 +171,7 @@ export async function getTeamStats(req: Request, res: Response) {
           id: `loaned:${name}`,
           name: name,
           nickname: name,
-          photo: null,
-          matches: 0
+          matches: 0,
         })
       }
       attendanceMap.get(`loaned:${name}`).matches++
@@ -199,7 +195,7 @@ export async function getTeamStats(req: Request, res: Response) {
         draws: 0,
         losses: 0,
         goalsScored: 0,
-        goalsAgainst: 0
+        goalsAgainst: 0,
       })
     }
     const stats = opponentMap.get(opp)
@@ -213,19 +209,17 @@ export async function getTeamStats(req: Request, res: Response) {
 
   const opponents = Array.from(opponentMap.values())
 
-  const topOpponents = [...opponents]
-    .sort((a, b) => b.matches - a.matches)
-    .slice(0, 5)
+  const topOpponents = [...opponents].sort((a, b) => b.matches - a.matches).slice(0, 5)
 
   const topScoringOpponents = [...opponents]
     .sort((a, b) => b.goalsScored - a.goalsScored)
     .slice(0, 5)
-    .map(o => ({ opponent: o.opponent, goalsScored: o.goalsScored }))
+    .map((o) => ({ opponent: o.opponent, goalsScored: o.goalsScored }))
 
   const topConcedingOpponents = [...opponents]
     .sort((a, b) => b.goalsAgainst - a.goalsAgainst)
     .slice(0, 5)
-    .map(o => ({ opponent: o.opponent, goalsAgainst: o.goalsAgainst }))
+    .map((o) => ({ opponent: o.opponent, goalsAgainst: o.goalsAgainst }))
 
   const result = {
     summary,
@@ -233,7 +227,7 @@ export async function getTeamStats(req: Request, res: Response) {
     topAttendance,
     topOpponents,
     topScoringOpponents,
-    topConcedingOpponents
+    topConcedingOpponents,
   }
 
   cache.set(cacheKey, result)

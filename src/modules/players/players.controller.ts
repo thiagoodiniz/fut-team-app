@@ -9,7 +9,9 @@ interface MatchWithPresence {
   opponent: string | null
   ourScore: number
   theirScore: number
-  goals: (Prisma.GoalGetPayload<{ include: { player: true } }>)[]
+  goals: Prisma.GoalGetPayload<{
+    include: { player: { select: { id: true; name: true; nickname: true } } }
+  }>[]
   presences: { present: boolean }[]
   loanedPlayers: string[]
 }
@@ -43,7 +45,16 @@ export async function listPlayers(req: Request, res: Response) {
           },
         ],
       },
-      include: {
+      select: {
+        id: true,
+        teamId: true,
+        name: true,
+        nickname: true,
+        position: true,
+        number: true,
+        active: true,
+        createdAt: true,
+        updatedAt: true,
         _count: {
           select: {
             presences: { where: { match: { seasonId }, present: true } },
@@ -59,6 +70,17 @@ export async function listPlayers(req: Request, res: Response) {
 
   const players = await prisma.player.findMany({
     where: { teamId },
+    select: {
+      id: true,
+      teamId: true,
+      name: true,
+      nickname: true,
+      position: true,
+      number: true,
+      active: true,
+      createdAt: true,
+      updatedAt: true,
+    },
     orderBy: [{ active: 'desc' }, { name: 'asc' }],
   })
 
@@ -255,14 +277,20 @@ export async function getPlayerGoalMatches(req: Request, res: Response) {
     include: {
       goals: {
         where: { ownGoal: false },
-        include: { player: true },
+        include: { player: { select: { id: true, name: true, nickname: true } } },
         orderBy: { createdAt: 'asc' },
       },
     },
   })
 
   const result = matches
-    .filter((m) => m.goals.some((g) => g.playerId === playerId || (g.loanedPlayerName && `loaned:${g.loanedPlayerName}` === playerId)))
+    .filter((m) =>
+      m.goals.some(
+        (g) =>
+          g.playerId === playerId ||
+          (g.loanedPlayerName && `loaned:${g.loanedPlayerName}` === playerId),
+      ),
+    )
     .map((m) => ({
       id: m.id,
       date: m.date,
@@ -283,7 +311,11 @@ export async function getPlayerGoalMatches(req: Request, res: Response) {
   let maxStreak = 0
 
   for (const match of [...matches].reverse()) {
-    const scoredInMatch = match.goals.some((goal) => goal.playerId === playerId || (goal.loanedPlayerName && `loaned:${goal.loanedPlayerName}` === playerId))
+    const scoredInMatch = match.goals.some(
+      (goal) =>
+        goal.playerId === playerId ||
+        (goal.loanedPlayerName && `loaned:${goal.loanedPlayerName}` === playerId),
+    )
     if (scoredInMatch) {
       currentStreak += 1
       if (currentStreak > maxStreak) maxStreak = currentStreak
@@ -338,7 +370,7 @@ export async function getPlayerPresenceMatches(req: Request, res: Response) {
     include: {
       goals: {
         where: { ownGoal: false },
-        include: { player: true },
+        include: { player: { select: { id: true, name: true, nickname: true } } },
         orderBy: { createdAt: 'asc' },
       },
       presences: {
@@ -376,4 +408,19 @@ export async function getPlayerPresenceMatches(req: Request, res: Response) {
     matches: result,
     stats: { presentCount, absentCount, totalMatches },
   })
+}
+
+export async function getPlayerPhoto(req: Request, res: Response) {
+  const playerId = req.params.id as string
+
+  const player = await prisma.player.findUnique({
+    where: { id: playerId },
+    select: { photo: true },
+  })
+
+  if (!player) {
+    return res.status(404).json({ error: 'PLAYER_NOT_FOUND' })
+  }
+
+  return res.json({ photo: player.photo })
 }

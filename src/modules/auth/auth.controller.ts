@@ -26,7 +26,18 @@ export async function register(req: Request, res: Response) {
     },
     include: {
       teams: {
-        include: { team: true },
+        include: {
+          team: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              isActive: true,
+              primaryColor: true,
+              secondaryColor: true,
+            },
+          },
+        },
       },
     },
   })
@@ -49,7 +60,20 @@ export async function login(req: Request, res: Response) {
   const user = await prisma.user.findUnique({
     where: { email },
     include: {
-      teams: { include: { team: true } },
+      teams: {
+        include: {
+          team: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              isActive: true,
+              primaryColor: true,
+              secondaryColor: true,
+            },
+          },
+        },
+      },
       joinRequests: {
         where: { status: 'PENDING' },
         include: { team: true },
@@ -75,15 +99,19 @@ export async function login(req: Request, res: Response) {
   if (!targetTeam && user.teams.length > 0) {
     targetTeam = user.teams[0]
     // Update lastTeamId asynchronously
-    prisma.user.update({
-      where: { id: user.id },
-      data: { lastTeamId: targetTeam.teamId }
-    }).catch(console.error)
+    prisma.user
+      .update({
+        where: { id: user.id },
+        data: { lastTeamId: targetTeam.teamId },
+      })
+      .catch(console.error)
   }
 
   if (!targetTeam) {
     return res.json({
-      token: jwt.sign({ userId: user.id, isManager: user.isManager }, process.env.JWT_SECRET!, { expiresIn: '7d' }),
+      token: jwt.sign({ userId: user.id, isManager: user.isManager }, process.env.JWT_SECRET!, {
+        expiresIn: '7d',
+      }),
       user: {
         id: user.id,
         name: user.name,
@@ -95,9 +123,14 @@ export async function login(req: Request, res: Response) {
   }
 
   const token = jwt.sign(
-    { userId: user.id, teamId: targetTeam.team.id, role: targetTeam.role, isManager: user.isManager },
+    {
+      userId: user.id,
+      teamId: targetTeam.team.id,
+      role: targetTeam.role,
+      isManager: user.isManager,
+    },
     process.env.JWT_SECRET!,
-    { expiresIn: '7d' }
+    { expiresIn: '7d' },
   )
 
   return res.json({
@@ -139,7 +172,18 @@ export async function googleLogin(req: Request, res: Response) {
       where: { email },
       include: {
         teams: {
-          include: { team: true },
+          include: {
+            team: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                isActive: true,
+                primaryColor: true,
+                secondaryColor: true,
+              },
+            },
+          },
         },
         joinRequests: {
           where: { status: 'PENDING' },
@@ -156,7 +200,20 @@ export async function googleLogin(req: Request, res: Response) {
           avatarUrl: picture,
         },
         include: {
-          teams: { include: { team: true } },
+          teams: {
+            include: {
+              team: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  isActive: true,
+                  primaryColor: true,
+                  secondaryColor: true,
+                },
+              },
+            },
+          },
           joinRequests: {
             include: { team: true },
           },
@@ -173,15 +230,19 @@ export async function googleLogin(req: Request, res: Response) {
     if (!targetTeam && user.teams.length > 0) {
       targetTeam = user.teams[0]
       // Update lastTeamId asynchronously
-      prisma.user.update({
-        where: { id: user.id },
-        data: { lastTeamId: targetTeam.teamId }
-      }).catch(console.error)
+      prisma.user
+        .update({
+          where: { id: user.id },
+          data: { lastTeamId: targetTeam.teamId },
+        })
+        .catch(console.error)
     }
 
     if (!targetTeam) {
       return res.json({
-        token: jwt.sign({ userId: user.id, isManager: user.isManager }, process.env.JWT_SECRET!, { expiresIn: '7d' }),
+        token: jwt.sign({ userId: user.id, isManager: user.isManager }, process.env.JWT_SECRET!, {
+          expiresIn: '7d',
+        }),
         user: {
           id: user.id,
           name: user.name,
@@ -193,9 +254,14 @@ export async function googleLogin(req: Request, res: Response) {
     }
 
     const token = jwt.sign(
-      { userId: user.id, teamId: targetTeam.team.id, role: targetTeam.role, isManager: user.isManager },
+      {
+        userId: user.id,
+        teamId: targetTeam.team.id,
+        role: targetTeam.role,
+        isManager: user.isManager,
+      },
       process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
+      { expiresIn: '7d' },
     )
 
     return res.json({

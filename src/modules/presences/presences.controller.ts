@@ -106,7 +106,7 @@ export async function upsertMatchPresences(req: Request, res: Response) {
           present: p.present,
         },
       }),
-    )
+    ),
   )
 
   invalidateCache(teamId as string)

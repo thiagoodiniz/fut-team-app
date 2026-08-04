@@ -3,29 +3,29 @@ import swaggerUi from 'swagger-ui-express'
 import { version } from '../../package.json'
 
 const options: swaggerJsDoc.Options = {
-    definition: {
-        openapi: '3.0.0',
-        info: {
-            title: 'FutTeam API Documentation',
-            version,
-            description: 'API for managing football teams, matches, players, and stats.',
-        },
-        components: {
-            securitySchemes: {
-                bearerAuth: {
-                    type: 'http',
-                    scheme: 'bearer',
-                    bearerFormat: 'JWT',
-                },
-            },
-        },
-        security: [
-            {
-                bearerAuth: [],
-            },
-        ],
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'FutTeam API Documentation',
+      version,
+      description: 'API for managing football teams, matches, players, and stats.',
     },
-    apis: ['./src/app.ts', './src/routes.ts', './src/modules/**/*.ts'],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+  },
+  apis: ['./src/app.ts', './src/routes.ts', './src/modules/**/*.ts'],
 }
 
 const swaggerSpec = swaggerJsDoc(options)
