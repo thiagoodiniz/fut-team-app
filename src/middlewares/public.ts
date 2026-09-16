@@ -1,10 +1,10 @@
-﻿import type { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 
 export async function publicMiddleware(req: Request, res: Response, next: NextFunction) {
-  const slug = req.params.slug
+  const slug = req.params.slug as string
 
-  if (!slug) {
+  if (!slug || typeof slug !== 'string') {
     return res.status(400).json({ error: 'SLUG_REQUIRED' })
   }
 
