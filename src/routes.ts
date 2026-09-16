@@ -104,7 +104,7 @@ routes.use('/dashboard', authMiddleware, cacheMiddleware(300), dashboardRoutes)
  *       200: { description: Team details }
  */
 routes.get('/teams/active', authMiddleware, cacheMiddleware(600), getTeam)
-routes.get('/teams/:id/logo', authMiddleware, cacheMiddleware(86400), getTeamLogo)
+routes.get('/teams/:id/logo', cacheMiddleware(86400), getTeamLogo)
 import { getTeamStats } from './modules/teams/teamStats.controller'
 routes.get('/teams/active/stats', authMiddleware, cacheMiddleware(300), getTeamStats)
 
@@ -148,7 +148,7 @@ routes.patch('/teams/active', authMiddleware, adminMiddleware, updateTeam)
  *     responses:
  *       200: { description: Search results }
  */
-routes.get('/teams/search', authMiddleware, searchTeams)
+routes.get('/teams/search', searchTeams)
 
 /**
  * @swagger
@@ -350,7 +350,7 @@ routes.get('/me', authMiddleware, async (req: Request, res: Response) => {
  *       200: { description: List of players }
  */
 routes.get('/players', authMiddleware, cacheMiddleware(300), listPlayers)
-routes.get('/players/:id/photo', authMiddleware, cacheMiddleware(86400), getPlayerPhoto)
+routes.get('/players/:id/photo', cacheMiddleware(86400), getPlayerPhoto)
 
 /**
  * @swagger
@@ -840,3 +840,14 @@ routes.put('/seasons/:id/players', authMiddleware, adminMiddleware, replaceSeaso
  *       204: { description: Player removed from season }
  */
 routes.delete('/seasons/:id/players/:playerId', authMiddleware, adminMiddleware, removeSeasonPlayer)
+
+import { publicMiddleware } from './middlewares/public'
+import { getDashboardStats } from './modules/dashboard/dashboard.controller'
+
+// Public routes (auth faked via publicMiddleware)
+routes.get('/public/:slug/team', publicMiddleware, cacheMiddleware(600), getTeam)
+routes.get('/public/:slug/dashboard', publicMiddleware, cacheMiddleware(300), getDashboardStats)
+routes.get('/public/:slug/seasons', publicMiddleware, cacheMiddleware(600), listSeasons)
+routes.get('/public/:slug/matches', publicMiddleware, cacheMiddleware(300), listMatches)
+routes.get('/public/:slug/players', publicMiddleware, cacheMiddleware(300), listPlayers)
+routes.get('/public/:slug/stats', publicMiddleware, cacheMiddleware(300), getTeamStats)

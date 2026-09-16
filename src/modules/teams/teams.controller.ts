@@ -30,10 +30,20 @@ export async function updateTeam(req: Request, res: Response) {
   const { teamId } = req.auth!
   const body = updateTeamSchema.parse(req.body)
 
+  if (body.slug) {
+    const existing = await prisma.team.findFirst({
+      where: { slug: body.slug, id: { not: teamId } },
+    })
+    if (existing) {
+      return res.status(400).json({ error: 'SLUG_IN_USE' })
+    }
+  }
+
   const team = await prisma.team.update({
     where: { id: teamId },
     data: {
       name: body.name,
+      slug: body.slug,
       logo: body.logo,
       primaryColor: body.primaryColor,
       secondaryColor: body.secondaryColor,

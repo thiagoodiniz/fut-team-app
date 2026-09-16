@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const updateTeamSchema = z.object({
   name: z.string().min(2).optional(),
+  slug: z.string().regex(/^[a-z0-9-]+$/).min(3).optional(),
   logo: z.string().optional().nullable(),
   primaryColor: z
     .string()
