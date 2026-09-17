@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
-import { cache } from '../../lib/cache'
+import { invalidateCache } from '../../middlewares/cache'
 import { createMatchSchema, updateMatchSchema } from './matches.schemas'
 
 async function getActiveSeasonId(teamId: string) {
@@ -109,8 +109,7 @@ export async function createMatch(req: Request, res: Response) {
     },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.status(201).json({ match })
 }
@@ -147,8 +146,7 @@ export async function updateMatch(req: Request, res: Response) {
     },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.json({ match })
 }
@@ -175,8 +173,7 @@ export async function deleteMatch(req: Request, res: Response) {
     where: { id: matchId },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.status(204).send()
 }

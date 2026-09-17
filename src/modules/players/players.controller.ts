@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
 import { Prisma } from '@prisma/client'
+import { invalidateCache, invalidatePlayerPhoto } from '../../middlewares/cache'
 
 interface MatchWithPresence {
   id: string
@@ -122,8 +123,7 @@ export async function createPlayer(req: Request, res: Response) {
       })
   }
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.status(201).json({ player })
 }
@@ -154,8 +154,11 @@ export async function updatePlayer(req: Request, res: Response) {
     },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
+  // Also invalidate the player's cached photo if it was updated
+  if (body.photo !== undefined) {
+    invalidatePlayerPhoto(playerId)
+  }
 
   return res.json({ player })
 }
@@ -177,8 +180,7 @@ export async function deletePlayer(req: Request, res: Response) {
     data: { active: false },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.json({ player })
 }

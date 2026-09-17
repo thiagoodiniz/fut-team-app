@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { authMiddleware } from './middlewares/auth'
 import { adminMiddleware, managerMiddleware } from './middlewares/rbac'
-import { cacheMiddleware } from './middlewares/cache'
+import { cacheMiddleware, logoCacheMiddleware, photoCacheMiddleware } from './middlewares/cache'
 import { register, login, googleLogin } from './modules/auth/auth.controller'
 import {
   createPlayer,
@@ -103,10 +103,10 @@ routes.use('/dashboard', authMiddleware, cacheMiddleware(300), dashboardRoutes)
  *     responses:
  *       200: { description: Team details }
  */
-routes.get('/teams/active', authMiddleware, cacheMiddleware(600), getTeam)
-routes.get('/teams/:id/logo', cacheMiddleware(86400), getTeamLogo)
+routes.get('/teams/active', authMiddleware, cacheMiddleware(), getTeam)
+routes.get('/teams/:id/logo', logoCacheMiddleware(), getTeamLogo)
 import { getTeamStats } from './modules/teams/teamStats.controller'
-routes.get('/teams/active/stats', authMiddleware, cacheMiddleware(300), getTeamStats)
+routes.get('/teams/active/stats', authMiddleware, cacheMiddleware(), getTeamStats)
 
 /**
  * POST /teams - Create a new team (Manager only)
@@ -183,7 +183,7 @@ routes.post('/teams/select', authMiddleware, selectTeam)
  *     responses:
  *       200: { description: List of join requests }
  */
-routes.get('/teams/active/requests', authMiddleware, cacheMiddleware(60), listTeamRequests)
+routes.get('/teams/active/requests', authMiddleware, cacheMiddleware(), listTeamRequests)
 
 /**
  * @swagger
@@ -217,7 +217,7 @@ routes.post('/teams/active/requests/respond', authMiddleware, adminMiddleware, r
  *     responses:
  *       200: { description: List of team members }
  */
-routes.get('/teams/active/members', authMiddleware, cacheMiddleware(300), listTeamMembers)
+routes.get('/teams/active/members', authMiddleware, cacheMiddleware(), listTeamMembers)
 
 /**
  * @swagger
@@ -349,8 +349,8 @@ routes.get('/me', authMiddleware, async (req: Request, res: Response) => {
  *     responses:
  *       200: { description: List of players }
  */
-routes.get('/players', authMiddleware, cacheMiddleware(300), listPlayers)
-routes.get('/players/:id/photo', cacheMiddleware(86400), getPlayerPhoto)
+routes.get('/players', authMiddleware, cacheMiddleware(), listPlayers)
+routes.get('/players/:id/photo', photoCacheMiddleware(), getPlayerPhoto)
 
 /**
  * @swagger
@@ -367,12 +367,12 @@ routes.get('/players/:id/photo', cacheMiddleware(86400), getPlayerPhoto)
  *     responses:
  *       200: { description: Player statistics }
  */
-routes.get('/players/:id/stats', authMiddleware, cacheMiddleware(300), getPlayerStats)
-routes.get('/players/:id/goal-matches', authMiddleware, cacheMiddleware(300), getPlayerGoalMatches)
+routes.get('/players/:id/stats', authMiddleware, cacheMiddleware(), getPlayerStats)
+routes.get('/players/:id/goal-matches', authMiddleware, cacheMiddleware(), getPlayerGoalMatches)
 routes.get(
   '/players/:id/presence-matches',
   authMiddleware,
-  cacheMiddleware(300),
+  cacheMiddleware(),
   getPlayerPresenceMatches,
 )
 
@@ -457,7 +457,7 @@ routes.delete('/players/:id', authMiddleware, adminMiddleware, deletePlayer)
  *     responses:
  *       200: { description: List of matches }
  */
-routes.get('/matches', authMiddleware, cacheMiddleware(300), listMatches)
+routes.get('/matches', authMiddleware, cacheMiddleware(), listMatches)
 
 /**
  * @swagger
@@ -474,7 +474,7 @@ routes.get('/matches', authMiddleware, cacheMiddleware(300), listMatches)
  *     responses:
  *       200: { description: Match details }
  */
-routes.get('/matches/:id', authMiddleware, cacheMiddleware(300), getMatchById)
+routes.get('/matches/:id', authMiddleware, cacheMiddleware(), getMatchById)
 
 /**
  * @swagger
@@ -549,7 +549,7 @@ routes.delete('/matches/:id', authMiddleware, adminMiddleware, deleteMatch)
  *     responses:
  *       200: { description: List of presences }
  */
-routes.get('/matches/:id/presences', authMiddleware, cacheMiddleware(60), listMatchPresences)
+routes.get('/matches/:id/presences', authMiddleware, cacheMiddleware(), listMatchPresences)
 
 /**
  * @swagger
@@ -598,7 +598,7 @@ routes.post('/matches/:id/presences', authMiddleware, adminMiddleware, upsertMat
  *     responses:
  *       200: { description: List of goals }
  */
-routes.get('/matches/:id/goals', authMiddleware, cacheMiddleware(60), listMatchGoals)
+routes.get('/matches/:id/goals', authMiddleware, cacheMiddleware(), listMatchGoals)
 
 /**
  * @swagger
@@ -660,7 +660,7 @@ routes.delete('/goals/:id', authMiddleware, adminMiddleware, deleteGoal)
  *     responses:
  *       200: { description: List of seasons }
  */
-routes.get('/seasons', authMiddleware, cacheMiddleware(600), listSeasons)
+routes.get('/seasons', authMiddleware, cacheMiddleware(), listSeasons)
 
 /**
  * @swagger
@@ -672,7 +672,7 @@ routes.get('/seasons', authMiddleware, cacheMiddleware(600), listSeasons)
  *     responses:
  *       200: { description: Active season details }
  */
-routes.get('/seasons/active', authMiddleware, cacheMiddleware(600), getActiveSeason)
+routes.get('/seasons/active', authMiddleware, cacheMiddleware(), getActiveSeason)
 
 /**
  * @swagger
@@ -764,7 +764,7 @@ routes.delete('/seasons/:id', authMiddleware, adminMiddleware, deleteSeason)
  *     responses:
  *       200: { description: List of season players }
  */
-routes.get('/seasons/:id/players', authMiddleware, cacheMiddleware(300), listSeasonPlayers)
+routes.get('/seasons/:id/players', authMiddleware, cacheMiddleware(), listSeasonPlayers)
 
 /**
  * @swagger
@@ -845,9 +845,9 @@ import { publicMiddleware } from './middlewares/public'
 import { getDashboardStats } from './modules/dashboard/dashboard.controller'
 
 // Public routes (auth faked via publicMiddleware)
-routes.get('/public/:slug/team', publicMiddleware, cacheMiddleware(600), getTeam)
-routes.get('/public/:slug/dashboard', publicMiddleware, cacheMiddleware(300), getDashboardStats)
-routes.get('/public/:slug/seasons', publicMiddleware, cacheMiddleware(600), listSeasons)
-routes.get('/public/:slug/matches', publicMiddleware, cacheMiddleware(300), listMatches)
-routes.get('/public/:slug/players', publicMiddleware, cacheMiddleware(300), listPlayers)
-routes.get('/public/:slug/stats', publicMiddleware, cacheMiddleware(300), getTeamStats)
+routes.get('/public/:slug/team', publicMiddleware, cacheMiddleware(), getTeam)
+routes.get('/public/:slug/dashboard', publicMiddleware, cacheMiddleware(), getDashboardStats)
+routes.get('/public/:slug/seasons', publicMiddleware, cacheMiddleware(), listSeasons)
+routes.get('/public/:slug/matches', publicMiddleware, cacheMiddleware(), listMatches)
+routes.get('/public/:slug/players', publicMiddleware, cacheMiddleware(), listPlayers)
+routes.get('/public/:slug/stats', publicMiddleware, cacheMiddleware(), getTeamStats)

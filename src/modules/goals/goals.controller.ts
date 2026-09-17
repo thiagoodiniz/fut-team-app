@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
-import { cache } from '../../lib/cache'
+import { invalidateCache } from '../../middlewares/cache'
 import { createGoalSchema } from './goals.schemas'
 
 async function getActiveSeasonId(teamId: string) {
@@ -103,8 +103,7 @@ export async function createMatchGoal(req: Request, res: Response) {
     orderBy: [{ createdAt: 'asc' }],
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.status(201).json({ goals })
 }
@@ -147,8 +146,7 @@ export async function deleteGoal(req: Request, res: Response) {
     where: { id: goalId },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.status(204).send()
 }

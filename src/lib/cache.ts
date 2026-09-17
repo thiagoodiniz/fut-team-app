@@ -3,8 +3,8 @@ import NodeCache from 'node-cache'
 class CacheService {
   private cache: NodeCache
 
-  constructor(ttlSeconds = 60 * 5) {
-    // Default 5 minutes
+  constructor(ttlSeconds = 60 * 60) {
+    // Default 1 hour (safety net — primary freshness is event-based invalidation)
     this.cache = new NodeCache({
       stdTTL: ttlSeconds,
       checkperiod: ttlSeconds * 0.2,

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
 import { updateTeamSchema } from './teams.schemas'
+import { invalidateCache } from '../../middlewares/cache'
 
 export async function getTeam(req: Request, res: Response) {
   const { teamId } = req.auth!
@@ -60,8 +61,7 @@ export async function updateTeam(req: Request, res: Response) {
     },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.json({ team })
 }

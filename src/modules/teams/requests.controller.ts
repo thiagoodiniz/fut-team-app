@@ -2,6 +2,7 @@ import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
 import { z } from 'zod'
 import { TeamRole } from '@prisma/client'
+import { invalidateCache } from '../../middlewares/cache'
 
 export async function searchTeams(req: Request, res: Response) {
   const query = req.query.q as string
@@ -65,8 +66,7 @@ export async function createJoinRequest(req: Request, res: Response) {
     },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.json({ joinRequest })
 }
@@ -133,8 +133,7 @@ export async function respondToRequest(req: Request, res: Response) {
     }),
   ])
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.json({ success: true })
 }
@@ -174,8 +173,7 @@ export async function updateMemberRole(req: Request, res: Response) {
     data: { role },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.json({ success: true })
 }
@@ -188,8 +186,7 @@ export async function removeMember(req: Request, res: Response) {
     where: { userId_teamId: { userId: userId as string, teamId: teamId as string } },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.json({ success: true })
 }

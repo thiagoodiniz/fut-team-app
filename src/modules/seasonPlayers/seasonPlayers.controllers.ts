@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
 import { addSeasonPlayerSchema, replaceSeasonPlayersSchema } from './seasonPlayers.schemas'
+import { invalidateCache } from '../../middlewares/cache'
 
 export async function listSeasonPlayers(req: Request, res: Response) {
   const { teamId } = req.auth!
@@ -72,8 +73,7 @@ export async function addSeasonPlayer(req: Request, res: Response) {
     },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.status(201).json({ seasonPlayer })
 }
@@ -114,8 +114,7 @@ export async function removeSeasonPlayer(req: Request, res: Response) {
     },
   })
 
-  const { invalidateCache } = require('../../middlewares/cache')
-  invalidateCache(teamId)
+  invalidateCache(teamId as string)
 
   return res.status(204).send()
 }
@@ -168,6 +167,8 @@ export async function replaceSeasonPlayers(req: Request, res: Response) {
     include: { player: true },
     orderBy: [{ player: { name: 'asc' } }],
   })
+
+  invalidateCache(teamId as string)
 
   return res.json({ seasonPlayers })
 }

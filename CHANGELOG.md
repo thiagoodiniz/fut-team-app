@@ -1,0 +1,14 @@
+# Changelog - FutTeam App
+
+Todas as modificações relevantes deste projeto são documentadas neste arquivo.
+
+## [Unreleased]
+
+### Modificado
+- **Refatoração do Sistema de Cache:**
+  - Transição de um modelo de cache dependente de TTL (5 min) para um modelo baseado primariamente em invalidação por eventos, com TTL de 1h (3600s) atuando apenas como rede de segurança de memória.
+  - Criação de middlewares distintos (`logoCacheMiddleware`, `photoCacheMiddleware`) resolvendo o bug onde rotas não-autenticadas (escudos e fotos) nunca eram cacheadas devido à ausência do `teamId` no JWT.
+  - Limpeza de dead-code na invalidação de cache (remoção de `delStartWith('dashboard:')` inoperante).
+  - Remoção de todos os imports dinâmicos (`require`) de cache injetados nos controllers, que poderiam falhar silenciosamente. Utilização de imports estáticos.
+  - Correção de vazamento de cache stale no controller de `replaceSeasonPlayers`, que não realizava invalidação após a modificação da lista de jogadores da temporada.
+  - Invalidação específica de foto do jogador (`invalidatePlayerPhoto`) adicionada à rota de atualização de jogador, garantindo consistência com o TTL estendido.
