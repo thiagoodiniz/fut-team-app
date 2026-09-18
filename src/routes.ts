@@ -90,7 +90,7 @@ export const routes = Router()
  *     responses:
  *       200: { description: Dashboard statistics }
  */
-routes.use('/dashboard', authMiddleware, cacheMiddleware(300), dashboardRoutes)
+routes.use('/dashboard', authMiddleware, cacheMiddleware(), dashboardRoutes)
 
 // Teams
 /**

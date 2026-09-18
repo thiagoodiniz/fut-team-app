@@ -4,7 +4,7 @@ import { cache } from '../lib/cache'
 // ─── Team-scoped cache (authenticated routes) ────────────────────────────────
 // Key: cache:{teamId}:{baseUrl}{path}:{queryStr}
 // Invalidated by: invalidateCache(teamId)
-export function cacheMiddleware(ttlSeconds = 3600) {
+export function cacheMiddleware(ttlSeconds = 86400) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (req.method !== 'GET') return next()
 
@@ -30,7 +30,7 @@ export function cacheMiddleware(ttlSeconds = 3600) {
 // ─── Team logo cache (unauthenticated route: /teams/:id/logo) ─────────────────
 // Key: logo:{teamId}
 // Invalidated by: invalidateCache(teamId)  ← handles logo too
-export function logoCacheMiddleware(ttlSeconds = 3600) {
+export function logoCacheMiddleware(ttlSeconds = 86400) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (req.method !== 'GET') return next()
 
@@ -55,7 +55,7 @@ export function logoCacheMiddleware(ttlSeconds = 3600) {
 // ─── Player photo cache (unauthenticated route: /players/:id/photo) ───────────
 // Key: photo:{playerId}
 // Invalidated by: invalidatePlayerPhoto(playerId)
-export function photoCacheMiddleware(ttlSeconds = 3600) {
+export function photoCacheMiddleware(ttlSeconds = 86400) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (req.method !== 'GET') return next()
 
