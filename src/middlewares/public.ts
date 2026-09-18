@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
+import jwt from 'jsonwebtoken'
+import process from 'process'
 
 export async function publicMiddleware(req: Request, res: Response, next: NextFunction) {
   const slug = req.params.slug as string
@@ -16,8 +18,41 @@ export async function publicMiddleware(req: Request, res: Response, next: NextFu
     return res.status(404).json({ error: 'TEAM_NOT_FOUND' })
   }
 
+  let loggedInUserId: string | null = null
+  const header = req.headers.authorization
+  if (header?.startsWith('Bearer ')) {
+    const token = header.replace('Bearer ', '').trim()
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
+      if (decoded && decoded.userId) {
+        loggedInUserId = decoded.userId
+      }
+    } catch {}
+  }
+
+  if (loggedInUserId) {
+    try {
+      await prisma.userTeam.upsert({
+        where: {
+          userId_teamId: {
+            userId: loggedInUserId,
+            teamId: team.id,
+          },
+        },
+        update: {},
+        create: {
+          userId: loggedInUserId,
+          teamId: team.id,
+          role: 'MEMBER',
+        },
+      })
+    } catch (err) {
+      // Ignorar erros de concorrência caso várias requisições públicas ocorram ao mesmo tempo
+    }
+  }
+
   req.auth = {
-    userId: 'public',
+    userId: loggedInUserId || 'public',
     teamId: team.id,
     role: 'MEMBER',
     isManager: false,
