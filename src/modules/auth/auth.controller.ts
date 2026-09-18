@@ -142,6 +142,12 @@ export async function login(req: Request, res: Response) {
       email: user.email,
       avatarUrl: user.avatarUrl,
     },
+    teams: user.teams.map((ut: any) => ({
+      id: ut.team.id,
+      name: ut.team.name,
+      slug: ut.team.slug,
+      role: ut.role,
+    })),
     team: {
       id: targetTeam.team.id,
       name: targetTeam.team.name,
@@ -272,6 +278,12 @@ export async function googleLogin(req: Request, res: Response) {
         email: user.email,
         avatarUrl: user.avatarUrl,
       },
+      teams: user.teams.map((ut: any) => ({
+        id: ut.team.id,
+        name: ut.team.name,
+        slug: ut.team.slug,
+        role: ut.role,
+      })),
       team: {
         id: targetTeam.team.id,
         name: targetTeam.team.name,
