@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import jwt from 'jsonwebtoken'
 import process from 'process'
+import { invalidateCache } from './cache'
 
 export async function publicMiddleware(req: Request, res: Response, next: NextFunction) {
   const slug = req.params.slug as string
@@ -32,20 +33,25 @@ export async function publicMiddleware(req: Request, res: Response, next: NextFu
 
   if (loggedInUserId) {
     try {
-      await prisma.userTeam.upsert({
+      const existingUserTeam = await prisma.userTeam.findUnique({
         where: {
           userId_teamId: {
             userId: loggedInUserId,
             teamId: team.id,
           },
         },
-        update: {},
-        create: {
-          userId: loggedInUserId,
-          teamId: team.id,
-          role: 'MEMBER',
-        },
       })
+
+      if (!existingUserTeam) {
+        await prisma.userTeam.create({
+          data: {
+            userId: loggedInUserId,
+            teamId: team.id,
+            role: 'MEMBER',
+          },
+        })
+        invalidateCache(team.id)
+      }
     } catch (err) {
       // Ignorar erros de concorrência caso várias requisições públicas ocorram ao mesmo tempo
     }
