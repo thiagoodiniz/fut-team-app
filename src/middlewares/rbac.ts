@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express'
 export function adminMiddleware(req: Request, res: Response, next: NextFunction) {
   const { role, isManager } = req.auth ?? {}
 
-  if (isManager || role === 'ADMIN') {
+  if (isManager || role === 'ADMIN' || role === 'OWNER') {
     return next()
   }
 

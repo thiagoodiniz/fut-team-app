@@ -333,7 +333,7 @@ export async function createTeam(req: Request, res: Response) {
         users: {
           create: {
             userId,
-            role: 'ADMIN',
+            role: 'OWNER',
           },
         },
       },
@@ -368,7 +368,7 @@ export async function createTeam(req: Request, res: Response) {
     {
       userId,
       teamId: team.id,
-      role: 'ADMIN',
+      role: 'OWNER',
       isManager: (user as any)?.isManager ?? false,
     },
     process.env.JWT_SECRET,

@@ -7,7 +7,7 @@ declare global {
       auth?: {
         userId: string
         teamId?: string
-        role?: 'ADMIN' | 'MEMBER'
+        role?: 'OWNER' | 'ADMIN' | 'MEMBER'
         isManager?: boolean
       }
     }
