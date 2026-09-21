@@ -5,9 +5,6 @@ import { Prisma } from '@prisma/client'
 
 type MatchWithStats = Prisma.MatchGetPayload<{
   include: {
-    goals: {
-      include: { player: { select: { id: true; name: true; nickname: true } } }
-    }
     _count: {
       select: { presences: true }
     }
@@ -29,10 +26,6 @@ export async function getTeamStats(req: Request, res: Response) {
     where: { teamId },
     orderBy: { date: 'desc' },
     include: {
-      goals: {
-        orderBy: { createdAt: 'asc' },
-        include: { player: { select: { id: true, name: true, nickname: true } } },
-      },
       _count: {
         select: { presences: { where: { present: true } } }, // Count only PRESENT players
       },

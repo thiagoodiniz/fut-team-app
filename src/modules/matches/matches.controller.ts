@@ -31,39 +31,11 @@ export async function listMatches(req: Request, res: Response) {
     orderBy: [{ date: 'desc' }],
     include: {
       goals: {
-        include: {
-          player: {
-            select: {
-              id: true,
-              name: true,
-              nickname: true,
-              position: true,
-              number: true,
-              active: true,
-              createdAt: true,
-              updatedAt: true,
-              teamId: true,
-            },
-          },
-        },
+        select: { id: true, playerId: true, ownGoal: true, loanedPlayerName: true, player: { select: { id: true, name: true, nickname: true } } },
       },
       presences: {
         where: { present: true },
-        include: {
-          player: {
-            select: {
-              id: true,
-              name: true,
-              nickname: true,
-              position: true,
-              number: true,
-              active: true,
-              createdAt: true,
-              updatedAt: true,
-              teamId: true,
-            },
-          },
-        },
+        select: { id: true, playerId: true, player: { select: { id: true, name: true, nickname: true } } },
       },
     },
   })
