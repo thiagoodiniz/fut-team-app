@@ -842,11 +842,21 @@ routes.put('/seasons/:id/players', authMiddleware, adminMiddleware, replaceSeaso
 routes.delete('/seasons/:id/players/:playerId', authMiddleware, adminMiddleware, removeSeasonPlayer)
 
 import { publicMiddleware } from './middlewares/public'
-import { getDashboardStats } from './modules/dashboard/dashboard.controller'
+import { 
+  getDashboardStats, 
+  getDashboardSummary, 
+  getDashboardLastMatches, 
+  getDashboardTopScorers, 
+  getDashboardAttendance 
+} from './modules/dashboard/dashboard.controller'
 
 // Public routes (auth faked via publicMiddleware)
 routes.get('/public/:slug/team', publicMiddleware, cacheMiddleware(), getTeam)
 routes.get('/public/:slug/dashboard', publicMiddleware, cacheMiddleware(), getDashboardStats)
+routes.get('/public/:slug/dashboard/summary', publicMiddleware, cacheMiddleware(), getDashboardSummary)
+routes.get('/public/:slug/dashboard/last-matches', publicMiddleware, cacheMiddleware(), getDashboardLastMatches)
+routes.get('/public/:slug/dashboard/top-scorers', publicMiddleware, cacheMiddleware(), getDashboardTopScorers)
+routes.get('/public/:slug/dashboard/attendance', publicMiddleware, cacheMiddleware(), getDashboardAttendance)
 routes.get('/public/:slug/seasons', publicMiddleware, cacheMiddleware(), listSeasons)
 routes.get('/public/:slug/matches', publicMiddleware, cacheMiddleware(), listMatches)
 routes.get('/public/:slug/players', publicMiddleware, cacheMiddleware(), listPlayers)

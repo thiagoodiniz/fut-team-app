@@ -1,26 +1,35 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
+import { cache } from '../../lib/cache'
 import { Prisma } from '@prisma/client'
 
-// Legacy full dashboard (kept for backward compatibility if needed)
-export { getDashboardStats } from './dashboard.legacy'
+type MatchWithStats = Prisma.MatchGetPayload<{
+  include: {
+    goals: {
+      include: { player: { select: { id: true; name: true; nickname: true } } }
+    }
+    _count: {
+      select: { presences: true }
+    }
+  }
+}>
 
-async function resolveSeasonId(teamId: string | undefined, querySeasonId?: string) {
-  if (querySeasonId) return querySeasonId
-
-  if (!teamId) return undefined
-
-  const activeSeason = await prisma.season.findFirst({
-    where: { teamId, isActive: true },
-  })
-  return activeSeason?.id
-}
-
-export async function getDashboardSummary(req: Request, res: Response) {
+export async function getDashboardStats(req: Request, res: Response) {
   const { teamId } = req.auth!
-  const seasonId = await resolveSeasonId(teamId, req.query.seasonId as string)
+  const querySeasonId = req.query.seasonId as string | undefined
+
+  let seasonId = querySeasonId
+
+  // If no season provided, try to find active one
+  if (!seasonId) {
+    const activeSeason = await prisma.season.findFirst({
+      where: { teamId, isActive: true },
+    })
+    seasonId = activeSeason?.id
+  }
 
   if (!seasonId) {
+    // If absolutely no season found, return empty stats
     return res.json({
       summary: {
         totalGames: 0,
@@ -31,49 +40,56 @@ export async function getDashboardSummary(req: Request, res: Response) {
         goalsAgainst: 0,
         winRate: 0,
       },
+      lastMatches: [],
+      attendance: [],
+      topScorers: [],
       nextMatch: null,
     })
   }
 
+  const cacheKey = `dashboard:${teamId}:${seasonId}`
+  const cachedData = cache.get(cacheKey)
+
+  if (cachedData) {
+    return res.json(cachedData)
+  }
+
   // 1. Fetch ALL matches for the season to process stats
-  // For summary, we only need basic counts, but we must filter by those with presences > 0
-  const matches = await prisma.match.findMany({
+  const matches: MatchWithStats[] = await prisma.match.findMany({
     where: { teamId, seasonId },
-    select: {
-      ourScore: true,
-      theirScore: true,
+    orderBy: { date: 'desc' },
+    include: {
+      goals: {
+        orderBy: { createdAt: 'asc' },
+        include: { player: { select: { id: true, name: true, nickname: true } } },
+      },
       _count: {
-        select: { presences: { where: { present: true } } },
+        select: { presences: { where: { present: true } } }, // Count only PRESENT players
       },
     },
   })
 
+  // Filter matches that effectively happened (have at least one present player)
   const playedMatches = matches.filter((m) => m._count.presences > 0)
 
-  // 2. Fetch Next Match
+  // 2. Fetch Next Match: The upcoming match that has NO presence marked yet.
   const nextMatch = await prisma.match.findFirst({
     where: {
       teamId,
       seasonId,
       date: {
-        gte: new Date(new Date().setHours(0, 0, 0, 0)),
+        gte: new Date(new Date().setHours(0, 0, 0, 0)), // Future or today (start of day)
       },
       presences: {
         none: {
           present: true,
-        },
+        }, // Effectively no confirmed presences
       },
     },
     orderBy: { date: 'asc' },
-    select: {
-      id: true,
-      date: true,
-      location: true,
-      opponent: true,
-    }
   })
 
-  // 3. Calculate Summary
+  // 3. Calculate Summary (using ONLY playedMatches)
   let wins = 0
   let draws = 0
   let losses = 0
@@ -90,51 +106,11 @@ export async function getDashboardSummary(req: Request, res: Response) {
   }
 
   const totalGames = playedMatches.length
+  // Win rate = (Wins / Total) * 100
   const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0
 
-  return res.json({
-    summary: { totalGames, wins, draws, losses, goalsFor, goalsAgainst, winRate },
-    nextMatch,
-  })
-}
-
-export async function getDashboardLastMatches(req: Request, res: Response) {
-  const { teamId } = req.auth!
-  const seasonId = await resolveSeasonId(teamId, req.query.seasonId as string)
-
-  if (!seasonId) {
-    return res.json({ lastMatches: [] })
-  }
-
-  // Find matches with presences > 0. Since Prisma can't easily filter by _count > 0 in where (unless we use groupBy or raw),
-  // we do a quick fetch of ids
-  const allMatches = await prisma.match.findMany({
-    where: { teamId, seasonId },
-    orderBy: { date: 'desc' },
-    select: {
-      id: true,
-      _count: { select: { presences: { where: { present: true } } } }
-    }
-  })
-
-  const playedMatchIds = allMatches.filter((m) => m._count.presences > 0).map((m) => m.id).slice(0, 5)
-
-  if (playedMatchIds.length === 0) {
-    return res.json({ lastMatches: [] })
-  }
-
-  const matches = await prisma.match.findMany({
-    where: { id: { in: playedMatchIds } },
-    orderBy: { date: 'desc' },
-    include: {
-      goals: {
-        orderBy: { createdAt: 'asc' },
-        include: { player: { select: { id: true, name: true, nickname: true } } },
-      },
-    },
-  })
-
-  const lastMatchesList = matches.map((m) => ({
+  // 4. Last Matches (take 5 from playedMatches)
+  const lastMatchesList = playedMatches.slice(0, 5).map((m) => ({
     id: m.id,
     date: m.date,
     location: m.location,
@@ -147,36 +123,29 @@ export async function getDashboardLastMatches(req: Request, res: Response) {
       .map((g) => (g.player ? g.player!.nickname || g.player!.name : g.loanedPlayerName!)),
   }))
 
-  return res.json({ lastMatches: lastMatchesList })
-}
-
-export async function getDashboardTopScorers(req: Request, res: Response) {
-  const { teamId } = req.auth!
-  const seasonId = await resolveSeasonId(teamId, req.query.seasonId as string)
-
-  if (!seasonId) {
-    return res.json({ topScorers: [] })
-  }
-
-  const matches = await prisma.match.findMany({
-    where: { teamId, seasonId },
-    orderBy: { date: 'desc' },
-    select: {
-      id: true,
-      date: true,
-      opponent: true,
-      loanedPlayers: true,
-      _count: { select: { presences: { where: { present: true } } } }
-    },
-  })
-
-  const playedMatches = matches.filter((m) => m._count.presences > 0)
+  // 5. Detailed Data Retrieval (ONLY for playedMatches)
   const matchIds = playedMatches.map((m) => m.id)
 
-  if (matchIds.length === 0) {
-    return res.json({ topScorers: [] })
+  const responseBase = {
+    summary: { totalGames, wins, draws, losses, goalsFor, goalsAgainst, winRate },
+    lastMatches: lastMatchesList,
+    attendance: [],
+    topScorers: [],
+    nextMatch: nextMatch
+      ? {
+          id: nextMatch.id,
+          date: nextMatch.date,
+          location: nextMatch.location,
+          opponent: nextMatch.opponent,
+        }
+      : null,
   }
 
+  if (matchIds.length === 0) {
+    return res.json(responseBase)
+  }
+
+  // Fetch all goals and presences ONLY for played matches
   const allGoals = await prisma.goal.findMany({
     where: { matchId: { in: matchIds } },
   })
@@ -194,6 +163,7 @@ export async function getDashboardTopScorers(req: Request, res: Response) {
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   )
 
+  // 6. Scorer and Attendance processing
   const topScorers = allSeasonPlayers
     .map((sp) => {
       const playerGoals = allGoals.filter((g) => g.playerId === sp.playerId && !g.ownGoal)
@@ -209,6 +179,7 @@ export async function getDashboardTopScorers(req: Request, res: Response) {
       let maxStreak = 0
       let lastGoalMatch: any = null
 
+      // Group goals by match for hat-tricks/doubles
       const goalsByMatch = new Map<string, number>()
       playerGoals.forEach((g) => {
         goalsByMatch.set(g.matchId, (goalsByMatch.get(g.matchId) || 0) + 1)
@@ -219,6 +190,7 @@ export async function getDashboardTopScorers(req: Request, res: Response) {
         else if (count === 2) doubles++
       })
 
+      // Streak and last goal
       for (const m of sortedMatchesAsc) {
         const matchGoals = playerGoals.filter((g: { matchId: string }) => g.matchId === m.id)
         if (matchGoals.length > 0) {
@@ -251,7 +223,9 @@ export async function getDashboardTopScorers(req: Request, res: Response) {
       }
     })
     .filter(Boolean)
+    .sort((a, b) => b!.goals - a!.goals)
 
+  // 6b. Process Loaned Top Scorers
   const loanedGoals = allGoals.filter((g) => g.loanedPlayerName && !g.ownGoal)
   const loanedScorersMap = new Map<string, any>()
 
@@ -280,9 +254,11 @@ export async function getDashboardTopScorers(req: Request, res: Response) {
     if (g.penalty) scorer.penaltyGoals++
   })
 
+  // Calculate matches played for loaned players (from matches list)
   loanedScorersMap.forEach((scorer, name) => {
     scorer.matchesPlayed = playedMatches.filter((m) => m.loanedPlayers.includes(name)).length
 
+    // Simple last goal for loaned
     const playerLoanedGoals = loanedGoals.filter((g) => g.loanedPlayerName === name)
     if (playerLoanedGoals.length > 0) {
       const lastG = playerLoanedGoals[playerLoanedGoals.length - 1]
@@ -297,48 +273,8 @@ export async function getDashboardTopScorers(req: Request, res: Response) {
   })
 
   const allTopScorers = [...topScorers, ...Array.from(loanedScorersMap.values())].sort(
-    (a, b) => b!.goals - a!.goals,
+    (a, b) => b.goals - a.goals,
   )
-
-  return res.json({ topScorers: allTopScorers })
-}
-
-export async function getDashboardAttendance(req: Request, res: Response) {
-  const { teamId } = req.auth!
-  const seasonId = await resolveSeasonId(teamId, req.query.seasonId as string)
-
-  if (!seasonId) {
-    return res.json({ attendance: [] })
-  }
-
-  const matches = await prisma.match.findMany({
-    where: { teamId, seasonId },
-    select: {
-      id: true,
-      date: true,
-      opponent: true,
-      loanedPlayers: true,
-      _count: { select: { presences: { where: { present: true } } } }
-    },
-  })
-
-  const playedMatches = matches.filter((m) => m._count.presences > 0)
-  const totalGames = playedMatches.length
-
-  if (totalGames === 0) {
-    return res.json({ attendance: [] })
-  }
-
-  const matchIds = playedMatches.map((m) => m.id)
-
-  const allPresences = await prisma.presence.findMany({
-    where: { matchId: { in: matchIds }, present: true },
-  })
-
-  const allSeasonPlayers = await prisma.seasonPlayer.findMany({
-    where: { seasonId },
-    include: { player: { select: { id: true, name: true, nickname: true } } },
-  })
 
   const attendanceList = allSeasonPlayers
     .map((sp) => {
@@ -347,10 +283,13 @@ export async function getDashboardAttendance(req: Request, res: Response) {
 
       if (presentCount === 0) return null
 
+      // Percentage relative to PLAYED games
       const percentage = totalGames > 0 ? Math.round((presentCount / totalGames) * 100) : 0
 
+      // Find last match by finding the max date among played matches the player was present
       let lastMatch = null
       if (playerPresences.length > 0) {
+        // Find matching matches from playedMatches instead of relying on include: { match: true }
         const presencesMatches = playerPresences
           .map((p) => playedMatches.find((m) => m.id === p.matchId))
           .filter(Boolean) as typeof playedMatches
@@ -376,7 +315,12 @@ export async function getDashboardAttendance(req: Request, res: Response) {
       }
     })
     .filter(Boolean)
+    .sort((a, b) => {
+      if (b!.percentage !== a!.percentage) return b!.percentage - a!.percentage
+      return a!.name.localeCompare(b!.name)
+    })
 
+  // 6d. Process Loaned Attendance
   const loanedAttendanceMap = new Map<string, any>()
   playedMatches.forEach((m) => {
     m.loanedPlayers.forEach((name) => {
@@ -394,6 +338,7 @@ export async function getDashboardAttendance(req: Request, res: Response) {
       const att = loanedAttendanceMap.get(name)
       att.presentCount++
 
+      // Update last match if newer
       if (!att.lastMatch || new Date(m.date) > new Date(att.lastMatch.date)) {
         att.lastMatch = {
           date: m.date,
@@ -409,10 +354,18 @@ export async function getDashboardAttendance(req: Request, res: Response) {
 
   const allAttendance = [...attendanceList, ...Array.from(loanedAttendanceMap.values())].sort(
     (a, b) => {
-      if (b!.percentage !== a!.percentage) return b!.percentage - a!.percentage
-      return a!.name.localeCompare(b!.name)
+      if (b.percentage !== a.percentage) return b.percentage - a.percentage
+      return a.name.localeCompare(b.name)
     },
   )
 
-  return res.json({ attendance: allAttendance })
+  const result = {
+    ...responseBase,
+    attendance: allAttendance,
+    topScorers: allTopScorers,
+  }
+
+  cache.set(cacheKey, result)
+
+  return res.json(result)
 }

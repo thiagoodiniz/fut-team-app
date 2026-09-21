@@ -5,6 +5,10 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 ## [Unreleased]
 
 ### Modificado
+- **Refatoração da Home Page (Dashboard):**
+  - Quebra do endpoint monolítico `getDashboardStats` em 4 endpoints granulares e paralelos (`/summary`, `/last-matches`, `/top-scorers`, `/attendance`) na API autenticada e pública.
+  - Correção de bug no cache manual antigo do controller (que nunca era invalidado). O cache da dashboard agora delega 100% para o `cacheMiddleware` automático na rota.
+
 - **Refatoração do Sistema de Cache:**
   - Transição de um modelo de cache dependente de TTL (5 min) para um modelo baseado primariamente em invalidação por eventos, com TTL de 1h (3600s) atuando apenas como rede de segurança de memória.
   - Criação de middlewares distintos (`logoCacheMiddleware`, `photoCacheMiddleware`) resolvendo o bug onde rotas não-autenticadas (escudos e fotos) nunca eram cacheadas devido à ausência do `teamId` no JWT.
