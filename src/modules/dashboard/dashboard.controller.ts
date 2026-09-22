@@ -155,12 +155,19 @@ export async function getDashboardLastMatches(req: Request, res: Response) {
       ? (m.ourScore > m.theirScore ? 'WIN' : m.ourScore < m.theirScore ? 'LOSS' : 'DRAW')
       : 'UPCOMING',
     scorers: m.goals
-      .filter((g) => !g.ownGoal && (g.player || g.loanedPlayerName))
       .map((g) => {
-        const scorerName = g.player ? g.player!.nickname || g.player!.name : g.loanedPlayerName!
-        const assistantName = g.assistant ? g.assistant!.nickname || g.assistant!.name : g.loanedAssistantName
+        if (g.ownGoal) return 'Gol contra'
+        if (!g.player && !g.loanedPlayerName) return null
+
+        const scorerName = g.player
+          ? g.player!.nickname || g.player!.name
+          : g.loanedPlayerName!
+        const assistantName = g.assistant
+          ? g.assistant!.nickname || g.assistant!.name
+          : g.loanedAssistantName
         return assistantName ? `${scorerName} (👟 ${assistantName})` : scorerName
-      }),
+      })
+      .filter(Boolean),
   }))
 
   return res.json({ lastMatches: lastMatchesList })

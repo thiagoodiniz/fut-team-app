@@ -307,14 +307,23 @@ export async function getPlayerGoalMatches(req: Request, res: Response) {
       competition: m.competition,
       competitionPhase: m.competitionPhase,
       ourScore: m.ourScore,
-      theirScore: m.theirScore,
       scorers: m.goals
-        .filter((g) => g.player || g.loanedPlayerName)
-        .map((g) => ({
-          playerId: g.playerId || `loaned:${g.loanedPlayerName}`,
-          name: g.player?.name || g.loanedPlayerName!,
-          nickname: g.player?.nickname || g.loanedPlayerName!,
-        })),
+        .map((g) => {
+          if (g.ownGoal) {
+            return {
+              playerId: 'own-goal',
+              name: 'Gol contra',
+              nickname: 'Gol contra',
+            }
+          }
+          if (!g.player && !g.loanedPlayerName) return null
+          return {
+            playerId: g.playerId || `loaned:${g.loanedPlayerName}`,
+            name: g.player?.name || g.loanedPlayerName!,
+            nickname: g.player?.nickname || g.loanedPlayerName!,
+          }
+        })
+        .filter(Boolean),
     }))
 
   let currentStreak = 0
@@ -401,12 +410,22 @@ export async function getPlayerPresenceMatches(req: Request, res: Response) {
       ? m.loanedPlayers.includes(playerId.replace('loaned:', ''))
       : m.presences[0]?.present === true,
     scorers: m.goals
-      .filter((g) => g.player || g.loanedPlayerName)
-      .map((g) => ({
-        playerId: g.playerId || `loaned:${g.loanedPlayerName}`,
-        name: g.player?.name || g.loanedPlayerName!,
-        nickname: g.player?.nickname || g.loanedPlayerName!,
-      })),
+      .map((g) => {
+        if (g.ownGoal) {
+          return {
+            playerId: 'own-goal',
+            name: 'Gol contra',
+            nickname: 'Gol contra',
+          }
+        }
+        if (!g.player && !g.loanedPlayerName) return null
+        return {
+          playerId: g.playerId || `loaned:${g.loanedPlayerName}`,
+          name: g.player?.name || g.loanedPlayerName!,
+          nickname: g.player?.nickname || g.loanedPlayerName!,
+        }
+      })
+      .filter(Boolean),
   }))
 
   const presentCount = result.filter((match) => match.present).length
@@ -488,12 +507,22 @@ export async function getPlayerAssistMatches(req: Request, res: Response) {
           (g.loanedAssistantName && `loaned:${g.loanedAssistantName}` === playerId),
       ).length,
       scorers: m.goals
-        .filter((g) => g.player || g.loanedPlayerName)
-        .map((g) => ({
-          playerId: g.playerId || `loaned:${g.loanedPlayerName}`,
-          name: g.player?.name || g.loanedPlayerName!,
-          nickname: g.player?.nickname || g.loanedPlayerName!,
-        })),
+        .map((g) => {
+          if (g.ownGoal) {
+            return {
+              playerId: 'own-goal',
+              name: 'Gol contra',
+              nickname: 'Gol contra',
+            }
+          }
+          if (!g.player && !g.loanedPlayerName) return null
+          return {
+            playerId: g.playerId || `loaned:${g.loanedPlayerName}`,
+            name: g.player?.name || g.loanedPlayerName!,
+            nickname: g.player?.nickname || g.loanedPlayerName!,
+          }
+        })
+        .filter(Boolean),
     }))
 
   return res.json({
