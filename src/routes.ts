@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { authMiddleware } from './middlewares/auth'
+import { prisma } from './lib/prisma'
 import { adminMiddleware, managerMiddleware } from './middlewares/rbac'
 import { cacheMiddleware, logoCacheMiddleware, photoCacheMiddleware } from './middlewares/cache'
 import { register, login, googleLogin } from './modules/auth/auth.controller'
