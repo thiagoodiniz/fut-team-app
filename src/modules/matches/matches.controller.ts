@@ -75,8 +75,8 @@ export async function createMatch(req: Request, res: Response) {
       location: body.location,
       opponent: body.opponent,
       notes: body.notes,
-      ourScore: body.ourScore ?? 0,
-      theirScore: body.theirScore ?? 0,
+      ourScore: body.ourScore ?? null,
+      theirScore: body.theirScore ?? null,
       loanedPlayers: body.loanedPlayers ?? [],
     },
   })
@@ -112,8 +112,8 @@ export async function updateMatch(req: Request, res: Response) {
       ...(body.location !== undefined ? { location: body.location } : {}),
       ...(body.opponent !== undefined ? { opponent: body.opponent } : {}),
       ...(body.notes !== undefined ? { notes: body.notes } : {}),
-      ...(body.ourScore !== undefined ? { ourScore: body.ourScore } : {}),
-      ...(body.theirScore !== undefined ? { theirScore: body.theirScore } : {}),
+      ...('ourScore' in body ? { ourScore: body.ourScore ?? null } : {}),
+      ...('theirScore' in body ? { theirScore: body.theirScore ?? null } : {}),
       ...(body.loanedPlayers !== undefined ? { loanedPlayers: body.loanedPlayers } : {}),
     },
   })

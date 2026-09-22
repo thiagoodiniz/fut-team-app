@@ -58,6 +58,7 @@ export async function getTeamStats(req: Request, res: Response) {
   let goalsAgainst = 0
 
   for (const m of playedMatches) {
+    if (m.ourScore === null || m.theirScore === null) continue
     goalsFor += m.ourScore
     goalsAgainst += m.theirScore
 
@@ -66,7 +67,9 @@ export async function getTeamStats(req: Request, res: Response) {
     else draws++
   }
 
-  const totalMatches = playedMatches.length
+  const totalMatches = playedMatches.filter(
+    (m) => m.ourScore !== null && m.theirScore !== null
+  ).length
   const winRate = totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0
   const goalDiff = goalsFor - goalsAgainst
 
@@ -193,6 +196,7 @@ export async function getTeamStats(req: Request, res: Response) {
     }
     const stats = opponentMap.get(opp)
     stats.matches++
+    if (m.ourScore === null || m.theirScore === null) continue
     stats.goalsScored += m.ourScore
     stats.goalsAgainst += m.theirScore
     if (m.ourScore > m.theirScore) stats.wins++

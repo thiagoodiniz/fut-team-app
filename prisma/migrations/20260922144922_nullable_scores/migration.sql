@@ -1,0 +1,8 @@
+-- AlterEnum
+ALTER TYPE "TeamRole" ADD VALUE 'OWNER';
+
+-- AlterTable
+ALTER TABLE "Match" ALTER COLUMN "ourScore" DROP NOT NULL,
+ALTER COLUMN "ourScore" DROP DEFAULT,
+ALTER COLUMN "theirScore" DROP NOT NULL,
+ALTER COLUMN "theirScore" DROP DEFAULT;

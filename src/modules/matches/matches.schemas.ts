@@ -15,7 +15,7 @@ export const updateMatchSchema = z.object({
   location: z.string().min(2).nullable().optional(),
   opponent: z.string().min(2).nullable().optional(),
   notes: z.string().nullable().optional(),
-  ourScore: z.number().int().min(0).max(99).optional(),
-  theirScore: z.number().int().min(0).max(99).optional(),
+  ourScore: z.number().int().min(0).max(99).nullable().optional(),
+  theirScore: z.number().int().min(0).max(99).nullable().optional(),
   loanedPlayers: z.array(z.string()).optional(),
 })

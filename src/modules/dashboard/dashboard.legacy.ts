@@ -97,6 +97,7 @@ export async function getDashboardStats(req: Request, res: Response) {
   let goalsAgainst = 0
 
   for (const m of playedMatches) {
+    if (m.ourScore === null || m.theirScore === null) continue
     goalsFor += m.ourScore
     goalsAgainst += m.theirScore
 
@@ -105,7 +106,9 @@ export async function getDashboardStats(req: Request, res: Response) {
     else draws++
   }
 
-  const totalGames = playedMatches.length
+  const totalGames = playedMatches.filter(
+    (m) => m.ourScore !== null && m.theirScore !== null
+  ).length
   // Win rate = (Wins / Total) * 100
   const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0
 
@@ -117,7 +120,9 @@ export async function getDashboardStats(req: Request, res: Response) {
     opponent: m.opponent ?? 'Sem adversário',
     ourScore: m.ourScore,
     theirScore: m.theirScore,
-    result: m.ourScore > m.theirScore ? 'WIN' : m.ourScore < m.theirScore ? 'LOSS' : 'DRAW',
+    result: m.ourScore !== null && m.theirScore !== null
+      ? (m.ourScore > m.theirScore ? 'WIN' : m.ourScore < m.theirScore ? 'LOSS' : 'DRAW')
+      : 'UPCOMING',
     scorers: m.goals
       .filter((g) => !g.ownGoal && (g.player || g.loanedPlayerName))
       .map((g) => (g.player ? g.player!.nickname || g.player!.name : g.loanedPlayerName!)),

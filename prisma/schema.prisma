@@ -186,8 +186,8 @@ model Match {
   opponent String?
   notes    String?
 
-  ourScore   Int @default(0)
-  theirScore Int @default(0)
+  ourScore   Int?
+  theirScore Int?
 
   team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
   season Season @relation(fields: [seasonId], references: [id], onDelete: Restrict)
