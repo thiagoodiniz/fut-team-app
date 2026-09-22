@@ -4,6 +4,21 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-22
+
+### Adicionado
+- **Ranking e Lógica de Assistências:** 
+  - Adicionado suporte completo à contagem de assistências, incluindo média de assistências por jogo no Dashboard e rotas para obter partidas com assistência do jogador.
+- **Competição em Gols:** 
+  - Adicionado envio de `competition` e `competitionPhase` no endpoint de gols por jogador.
+- **Painel Admin:** Adicionadas rotas seguras para listagem (`getAllTeams`), edição (`updateTeamAdmin`) e soft delete (`softDeleteTeam`) global de times. O criador de um time agora recebe a permissão de dono `OWNER` imediatamente na resposta da criação.
+- **Gols Contra:** Exibição estruturada de gols contra nos detalhamentos e histórico de partidas.
+
+### Corrigido
+- **Jogos sem Placar:** Correção de bug no Dashboard e nos rankings (Artilharia, Assistência, Frequência) que listavam jogos com placar nulo como finalizados. Agora apenas jogos com `ourScore` e `theirScore` preenchidos são contabilizados nas estatísticas.
+
+## [1.1.0] - Anterior
+
 ### Modificado
 - **Refatoração da Home Page (Dashboard):**
   - Quebra do endpoint monolítico `getDashboardStats` em 4 endpoints granulares e paralelos (`/summary`, `/last-matches`, `/top-scorers`, `/attendance`) na API autenticada e pública.
