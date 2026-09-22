@@ -89,7 +89,7 @@ export async function approveTeamRequest(req: Request, res: Response) {
       data: {
         userId: teamRequest.userId,
         teamId: newTeam.id,
-        role: 'OWNER',
+        role: 'ADMIN',
       },
     })
 

@@ -16,8 +16,9 @@ export async function searchTeams(req: Request, res: Response) {
               { slug: { contains: query, mode: 'insensitive' } },
             ],
             isActive: true,
+            deletedAt: null,
           }
-        : { isActive: true },
+        : { isActive: true, deletedAt: null },
     select: {
       id: true,
       name: true,

@@ -64,6 +64,13 @@ import {
   rejectTeamRequest,
 } from './modules/teams/creationRequests.controller'
 
+import {
+  getAdminDashboardStats,
+  listAdminTeams,
+  updateAdminTeam,
+  deleteAdminTeam
+} from './modules/admin/admin.controller'
+
 /**
  * @swagger
  * tags:
@@ -114,6 +121,14 @@ routes.get('/teams/active', authMiddleware, cacheMiddleware(), getTeam)
 routes.get('/teams/:id/logo', logoCacheMiddleware(), getTeamLogo)
 import { getTeamStats } from './modules/teams/teamStats.controller'
 routes.get('/teams/active/stats', authMiddleware, cacheMiddleware(), getTeamStats)
+
+/**
+ * ADMIN ROUTES
+ */
+routes.get('/admin/stats', authMiddleware, managerMiddleware, getAdminDashboardStats)
+routes.get('/admin/teams', authMiddleware, managerMiddleware, listAdminTeams)
+routes.patch('/admin/teams/:id', authMiddleware, managerMiddleware, updateAdminTeam)
+routes.delete('/admin/teams/:id', authMiddleware, managerMiddleware, deleteAdminTeam)
 
 /**
  * POST /teams/creation-requests
