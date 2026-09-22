@@ -372,7 +372,49 @@ routes.post('/auth/login', login)
 routes.post('/auth/google', googleLogin)
 
 routes.get('/me', authMiddleware, async (req: Request, res: Response) => {
-  return res.json({ auth: req.auth })
+  const { userId } = req.auth!
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      teams: {
+        include: {
+          team: {
+            select: { id: true, name: true, slug: true, isActive: true, primaryColor: true, secondaryColor: true }
+          }
+        }
+      },
+      joinRequests: {
+        where: { status: 'PENDING' },
+        include: { team: true }
+      }
+    }
+  })
+  
+  if (!user) return res.status(404).json({ error: 'USER_NOT_FOUND' })
+  
+  const mappedTeams = user.teams.map((ut: any) => ({
+    id: ut.team.id,
+    name: ut.team.name,
+    slug: ut.team.slug,
+    role: ut.role,
+    isActive: ut.team.isActive,
+    primaryColor: ut.team.primaryColor,
+    secondaryColor: ut.team.secondaryColor,
+  }))
+
+  const payload = {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    isManager: user.isManager,
+    teams: mappedTeams,
+    pendingRequest: user.joinRequests.length > 0 ? {
+      teamId: user.joinRequests[0].teamId,
+      teamName: user.joinRequests[0].team.name,
+    } : null,
+  }
+  
+  return res.json({ auth: payload })
 })
 
 // Players
