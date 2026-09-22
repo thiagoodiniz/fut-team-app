@@ -304,6 +304,8 @@ export async function getPlayerGoalMatches(req: Request, res: Response) {
       date: m.date,
       location: m.location,
       opponent: m.opponent ?? 'Sem adversario',
+      competition: m.competition,
+      competitionPhase: m.competitionPhase,
       ourScore: m.ourScore,
       theirScore: m.theirScore,
       scorers: m.goals
@@ -480,7 +482,7 @@ export async function getPlayerAssistMatches(req: Request, res: Response) {
       theirScore: m.theirScore,
       competition: m.competition,
       competitionPhase: m.competitionPhase,
-      playerGoals: m.goals.filter(
+      assistsCount: m.goals.filter(
         (g) =>
           g.assistantId === playerId ||
           (g.loanedAssistantName && `loaned:${g.loanedAssistantName}` === playerId),
