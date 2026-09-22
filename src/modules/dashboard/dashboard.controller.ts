@@ -70,6 +70,8 @@ export async function getDashboardSummary(req: Request, res: Response) {
       date: true,
       location: true,
       opponent: true,
+      competition: true,
+      competitionPhase: true,
     }
   })
 
