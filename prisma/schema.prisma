@@ -37,6 +37,7 @@ model User {
   teams    UserTeam[]
   accounts OAuthAccount[]
   joinRequests JoinRequest[]
+  teamCreationRequests TeamCreationRequest[]
 
   lastTeamId String?
 
@@ -243,4 +244,21 @@ model Presence {
   @@unique([matchId, playerId])
   @@index([matchId])
   @@index([playerId])
+}
+
+model TeamCreationRequest {
+  id        String @id @default(uuid())
+  userId    String
+  teamName  String
+  userName  String
+  phone     String
+  email     String
+  status    JoinRequestStatus @default(PENDING)
+  
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

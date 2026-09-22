@@ -57,6 +57,13 @@ import {
   createTeam,
 } from './modules/teams/requests.controller'
 
+import {
+  createTeamRequest,
+  listTeamCreationRequests,
+  approveTeamRequest,
+  rejectTeamRequest,
+} from './modules/teams/creationRequests.controller'
+
 /**
  * @swagger
  * tags:
@@ -107,6 +114,26 @@ routes.get('/teams/active', authMiddleware, cacheMiddleware(), getTeam)
 routes.get('/teams/:id/logo', logoCacheMiddleware(), getTeamLogo)
 import { getTeamStats } from './modules/teams/teamStats.controller'
 routes.get('/teams/active/stats', authMiddleware, cacheMiddleware(), getTeamStats)
+
+/**
+ * POST /teams/creation-requests
+ */
+routes.post('/teams/creation-requests', authMiddleware, createTeamRequest)
+
+/**
+ * GET /teams/creation-requests
+ */
+routes.get('/teams/creation-requests', authMiddleware, managerMiddleware, listTeamCreationRequests)
+
+/**
+ * POST /teams/creation-requests/:id/approve
+ */
+routes.post('/teams/creation-requests/:id/approve', authMiddleware, managerMiddleware, approveTeamRequest)
+
+/**
+ * POST /teams/creation-requests/:id/reject
+ */
+routes.post('/teams/creation-requests/:id/reject', authMiddleware, managerMiddleware, rejectTeamRequest)
 
 /**
  * POST /teams - Create a new team (Manager only)
