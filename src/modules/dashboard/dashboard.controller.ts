@@ -48,7 +48,7 @@ export async function getDashboardSummary(req: Request, res: Response) {
     },
   })
 
-  const playedMatches = matches.filter((m) => m._count.presences > 0)
+  const playedMatches = matches.filter((m) => m.ourScore !== null && m.theirScore !== null)
 
   // 2. Fetch Next Match
   const nextMatch = await prisma.match.findFirst({
@@ -58,11 +58,8 @@ export async function getDashboardSummary(req: Request, res: Response) {
       date: {
         gte: new Date(new Date().setHours(0, 0, 0, 0)),
       },
-      presences: {
-        none: {
-          present: true,
-        },
-      },
+      ourScore: null,
+      theirScore: null,
     },
     orderBy: { date: 'asc' },
     select: {
@@ -111,18 +108,20 @@ export async function getDashboardLastMatches(req: Request, res: Response) {
     return res.json({ lastMatches: [] })
   }
 
-  // Find matches with presences > 0. Since Prisma can't easily filter by _count > 0 in where (unless we use groupBy or raw),
-  // we do a quick fetch of ids
   const allMatches = await prisma.match.findMany({
     where: { teamId, seasonId },
     orderBy: { date: 'desc' },
     select: {
       id: true,
-      _count: { select: { presences: { where: { present: true } } } }
+      ourScore: true,
+      theirScore: true,
     }
   })
 
-  const playedMatchIds = allMatches.filter((m) => m._count.presences > 0).map((m) => m.id).slice(0, 5)
+  const playedMatchIds = allMatches
+    .filter((m) => m.ourScore !== null && m.theirScore !== null)
+    .map((m) => m.id)
+    .slice(0, 5)
 
   if (playedMatchIds.length === 0) {
     return res.json({ lastMatches: [] })
@@ -191,11 +190,13 @@ export async function getDashboardTopScorers(req: Request, res: Response) {
       competition: true,
       competitionPhase: true,
       loanedPlayers: true,
+      ourScore: true,
+      theirScore: true,
       _count: { select: { presences: { where: { present: true } } } }
     },
   })
 
-  const playedMatches = matches.filter((m) => m._count.presences > 0)
+  const playedMatches = matches.filter((m) => m.ourScore !== null && m.theirScore !== null)
   const matchIds = playedMatches.map((m) => m.id)
 
   if (matchIds.length === 0) {
@@ -346,11 +347,13 @@ export async function getDashboardTopAssistants(req: Request, res: Response) {
       id: true,
       date: true,
       loanedPlayers: true,
+      ourScore: true,
+      theirScore: true,
       _count: { select: { presences: { where: { present: true } } } },
     },
   })
 
-  const playedMatches = matches.filter((m) => m._count.presences > 0)
+  const playedMatches = matches.filter((m) => m.ourScore !== null && m.theirScore !== null)
   const matchIds = playedMatches.map((m) => m.id)
 
   if (matchIds.length === 0) {
@@ -438,11 +441,13 @@ export async function getDashboardAttendance(req: Request, res: Response) {
       date: true,
       opponent: true,
       loanedPlayers: true,
+      ourScore: true,
+      theirScore: true,
       _count: { select: { presences: { where: { present: true } } } }
     },
   })
 
-  const playedMatches = matches.filter((m) => m._count.presences > 0)
+  const playedMatches = matches.filter((m) => m.ourScore !== null && m.theirScore !== null)
   const totalGames = playedMatches.length
 
   if (totalGames === 0) {
