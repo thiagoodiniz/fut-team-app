@@ -172,6 +172,8 @@ export async function getDashboardTopScorers(req: Request, res: Response) {
       id: true,
       date: true,
       opponent: true,
+      competition: true,
+      competitionPhase: true,
       loanedPlayers: true,
       _count: { select: { presences: { where: { present: true } } } }
     },

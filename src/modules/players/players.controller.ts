@@ -8,8 +8,10 @@ interface MatchWithPresence {
   date: Date
   location: string | null
   opponent: string | null
-  ourScore: number
-  theirScore: number
+  ourScore: number | null
+  theirScore: number | null
+  competition: string | null
+  competitionPhase: string | null
   goals: Prisma.GoalGetPayload<{
     include: { player: { select: { id: true; name: true; nickname: true } } }
   }>[]

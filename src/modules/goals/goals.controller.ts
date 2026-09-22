@@ -79,7 +79,7 @@ export async function createMatchGoal(req: Request, res: Response) {
     where: { matchId, ownGoal: false },
   })
   const newNonOwnGoals = body.goals.filter((g) => !g.ownGoal).length
-  if (existingGoalsCount + newNonOwnGoals > match.ourScore) {
+  if (match.ourScore !== null && existingGoalsCount + newNonOwnGoals > match.ourScore) {
     return res
       .status(400)
       .json({ error: 'GOAL_LIMIT_EXCEEDED', message: 'Quantidade de gols excede o placar' })
