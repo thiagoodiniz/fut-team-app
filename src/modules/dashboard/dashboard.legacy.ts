@@ -118,6 +118,8 @@ export async function getDashboardStats(req: Request, res: Response) {
     date: m.date,
     location: m.location,
     opponent: m.opponent ?? 'Sem adversário',
+    competition: m.competition,
+    competitionPhase: m.competitionPhase,
     ourScore: m.ourScore,
     theirScore: m.theirScore,
     result: m.ourScore !== null && m.theirScore !== null
@@ -222,6 +224,8 @@ export async function getDashboardStats(req: Request, res: Response) {
           ? {
               date: lastGoalMatch.date,
               opponent: lastGoalMatch.opponent,
+              competition: lastGoalMatch.competition,
+              competitionPhase: lastGoalMatch.competitionPhase,
             }
           : null,
         matchesPlayed: allPresences.filter((p) => p.playerId === sp.playerId).length,
@@ -272,6 +276,8 @@ export async function getDashboardStats(req: Request, res: Response) {
         scorer.lastGoal = {
           date: match.date,
           opponent: match.opponent,
+          competition: match.competition,
+          competitionPhase: match.competitionPhase,
         }
       }
     }

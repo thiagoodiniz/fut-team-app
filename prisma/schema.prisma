@@ -181,10 +181,12 @@ model Match {
   teamId   String
   seasonId String
 
-  date     DateTime
-  location String?
-  opponent String?
-  notes    String?
+  date             DateTime
+  location         String?
+  opponent         String?
+  competition      String?
+  competitionPhase String?
+  notes            String?
 
   ourScore   Int?
   theirScore Int?
