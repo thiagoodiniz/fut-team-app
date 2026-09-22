@@ -335,7 +335,12 @@ export async function getDashboardTopAssistants(req: Request, res: Response) {
 
   const matches = await prisma.match.findMany({
     where: { teamId, seasonId },
-    select: { id: true, date: true, _count: { select: { presences: { where: { present: true } } } } },
+    select: {
+      id: true,
+      date: true,
+      loanedPlayers: true,
+      _count: { select: { presences: { where: { present: true } } } },
+    },
   })
 
   const playedMatches = matches.filter((m) => m._count.presences > 0)
@@ -346,7 +351,17 @@ export async function getDashboardTopAssistants(req: Request, res: Response) {
   }
 
   const allGoals = await prisma.goal.findMany({
-    where: { matchId: { in: matchIds }, assistantId: { not: null } },
+    where: {
+      matchId: { in: matchIds },
+      OR: [
+        { assistantId: { not: null } },
+        { loanedAssistantName: { not: null } },
+      ],
+    },
+  })
+
+  const allPresences = await prisma.presence.findMany({
+    where: { matchId: { in: matchIds }, present: true },
   })
 
   const allSeasonPlayers = await prisma.seasonPlayer.findMany({
@@ -366,12 +381,39 @@ export async function getDashboardTopAssistants(req: Request, res: Response) {
         name: sp.player.name,
         nickname: sp.player.nickname,
         assists: totalAssists,
+        matchesPlayed: allPresences.filter((p) => p.playerId === sp.playerId).length,
       }
     })
     .filter(Boolean)
-    .sort((a, b) => b!.assists - a!.assists)
 
-  return res.json({ topAssistants })
+  const loanedAssists = allGoals.filter((g) => g.loanedAssistantName && !g.ownGoal)
+  const loanedAssistantsMap = new Map<string, any>()
+
+  loanedAssists.forEach((g) => {
+    const name = g.loanedAssistantName!
+    if (!loanedAssistantsMap.has(name)) {
+      loanedAssistantsMap.set(name, {
+        id: `loaned:${name}`,
+        name: name,
+        nickname: name,
+        assists: 0,
+        matchesPlayed: 0,
+        isLoaned: true,
+      })
+    }
+    const assistant = loanedAssistantsMap.get(name)
+    assistant.assists++
+  })
+
+  loanedAssistantsMap.forEach((assistant, name) => {
+    assistant.matchesPlayed = playedMatches.filter((m) => m.loanedPlayers.includes(name)).length
+  })
+
+  const allTopAssistants = [...topAssistants, ...Array.from(loanedAssistantsMap.values())].sort(
+    (a, b) => b!.assists - a!.assists,
+  )
+
+  return res.json({ topAssistants: allTopAssistants })
 }
 
 export async function getDashboardAttendance(req: Request, res: Response) {
