@@ -31,7 +31,7 @@ export async function listMatches(req: Request, res: Response) {
     orderBy: [{ date: 'desc' }],
     include: {
       goals: {
-        select: { id: true, playerId: true, ownGoal: true, loanedPlayerName: true, player: { select: { id: true, name: true, nickname: true } } },
+        select: { id: true, playerId: true, assistantId: true, ownGoal: true, loanedPlayerName: true, loanedAssistantName: true, player: { select: { id: true, name: true, nickname: true } }, assistant: { select: { id: true, name: true, nickname: true } } },
       },
       presences: {
         where: { present: true },

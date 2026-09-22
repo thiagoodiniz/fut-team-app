@@ -134,7 +134,10 @@ export async function getDashboardLastMatches(req: Request, res: Response) {
     include: {
       goals: {
         orderBy: { createdAt: 'asc' },
-        include: { player: { select: { id: true, name: true, nickname: true } } },
+        include: { 
+          player: { select: { id: true, name: true, nickname: true } },
+          assistant: { select: { id: true, name: true, nickname: true } }
+        },
       },
     },
   })
@@ -153,7 +156,11 @@ export async function getDashboardLastMatches(req: Request, res: Response) {
       : 'UPCOMING',
     scorers: m.goals
       .filter((g) => !g.ownGoal && (g.player || g.loanedPlayerName))
-      .map((g) => (g.player ? g.player!.nickname || g.player!.name : g.loanedPlayerName!)),
+      .map((g) => {
+        const scorerName = g.player ? g.player!.nickname || g.player!.name : g.loanedPlayerName!
+        const assistantName = g.assistant ? g.assistant!.nickname || g.assistant!.name : g.loanedAssistantName
+        return assistantName ? `${scorerName} (👟 ${assistantName})` : scorerName
+      }),
   }))
 
   return res.json({ lastMatches: lastMatchesList })
@@ -316,6 +323,55 @@ export async function getDashboardTopScorers(req: Request, res: Response) {
   )
 
   return res.json({ topScorers: allTopScorers })
+}
+
+export async function getDashboardTopAssistants(req: Request, res: Response) {
+  const { teamId } = req.auth!
+  const seasonId = await resolveSeasonId(teamId, req.query.seasonId as string)
+
+  if (!seasonId) {
+    return res.json({ topAssistants: [] })
+  }
+
+  const matches = await prisma.match.findMany({
+    where: { teamId, seasonId },
+    select: { id: true, date: true, _count: { select: { presences: { where: { present: true } } } } },
+  })
+
+  const playedMatches = matches.filter((m) => m._count.presences > 0)
+  const matchIds = playedMatches.map((m) => m.id)
+
+  if (matchIds.length === 0) {
+    return res.json({ topAssistants: [] })
+  }
+
+  const allGoals = await prisma.goal.findMany({
+    where: { matchId: { in: matchIds }, assistantId: { not: null } },
+  })
+
+  const allSeasonPlayers = await prisma.seasonPlayer.findMany({
+    where: { seasonId },
+    include: { player: { select: { id: true, name: true, nickname: true } } },
+  })
+
+  const topAssistants = allSeasonPlayers
+    .map((sp) => {
+      const playerAssists = allGoals.filter((g) => g.assistantId === sp.playerId)
+      const totalAssists = playerAssists.length
+
+      if (totalAssists === 0) return null
+
+      return {
+        id: sp.playerId,
+        name: sp.player.name,
+        nickname: sp.player.nickname,
+        assists: totalAssists,
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b!.assists - a!.assists)
+
+  return res.json({ topAssistants })
 }
 
 export async function getDashboardAttendance(req: Request, res: Response) {

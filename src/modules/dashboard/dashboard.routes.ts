@@ -4,6 +4,7 @@ import {
   getDashboardSummary,
   getDashboardLastMatches,
   getDashboardTopScorers,
+  getDashboardTopAssistants,
   getDashboardAttendance,
 } from './dashboard.controller'
 
@@ -13,4 +14,5 @@ dashboardRoutes.get('/', getDashboardStats)
 dashboardRoutes.get('/summary', getDashboardSummary)
 dashboardRoutes.get('/last-matches', getDashboardLastMatches)
 dashboardRoutes.get('/top-scorers', getDashboardTopScorers)
+dashboardRoutes.get('/top-assistants', getDashboardTopAssistants)
 dashboardRoutes.get('/attendance', getDashboardAttendance)

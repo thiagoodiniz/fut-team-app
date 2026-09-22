@@ -27,7 +27,7 @@ export async function listMatchGoals(req: Request, res: Response) {
 
   const goals = await prisma.goal.findMany({
     where: { matchId },
-    include: { player: true },
+    include: { player: true, assistant: true },
     orderBy: [{ createdAt: 'asc' }],
   })
 
@@ -89,6 +89,8 @@ export async function createMatchGoal(req: Request, res: Response) {
     matchId,
     playerId: g.ownGoal ? null : body.playerId ?? null,
     loanedPlayerName: g.ownGoal ? null : body.loanedPlayerName ?? null,
+    assistantId: g.ownGoal ? null : g.assistantId ?? null,
+    loanedAssistantName: g.ownGoal ? null : g.loanedAssistantName ?? null,
     minute: g.minute ?? undefined,
     ownGoal: g.ownGoal ?? false,
     freeKick: g.ownGoal ? false : g.freeKick ?? false,
@@ -99,7 +101,7 @@ export async function createMatchGoal(req: Request, res: Response) {
 
   const goals = await prisma.goal.findMany({
     where: { matchId },
-    include: { player: true },
+    include: { player: true, assistant: true },
     orderBy: [{ createdAt: 'asc' }],
   })
 
@@ -149,4 +151,50 @@ export async function deleteGoal(req: Request, res: Response) {
   invalidateCache(teamId as string)
 
   return res.status(204).send()
+}
+
+export async function updateGoal(req: Request, res: Response) {
+  const { teamId } = req.auth!
+  const goalId = req.params.id as string
+  const body = require('./goals.schemas').updateGoalSchema.parse(req.body)
+
+  const goal = await prisma.goal.findFirst({
+    where: { id: goalId },
+    include: {
+      match: {
+        select: { teamId: true }
+      }
+    }
+  })
+
+  if (!goal) {
+    return res.status(404).json({ error: 'GOAL_NOT_FOUND' })
+  }
+
+  if (goal.match.teamId !== teamId) {
+    return res.status(403).json({ error: 'FORBIDDEN' })
+  }
+
+  if ((body.freeKick ?? false) && (body.penalty ?? false)) {
+    return res.status(400).json({ error: 'INVALID_GOAL_TYPE' })
+  }
+
+  // Se o gol é contra, não permite setar assistente, falta ou pênalti
+  const isOwnGoal = goal.ownGoal
+  
+  const updatedGoal = await prisma.goal.update({
+    where: { id: goalId },
+    data: {
+      minute: body.minute ?? null,
+      assistantId: isOwnGoal ? null : body.assistantId ?? null,
+      loanedAssistantName: isOwnGoal ? null : body.loanedAssistantName ?? null,
+      freeKick: isOwnGoal ? false : body.freeKick ?? false,
+      penalty: isOwnGoal ? false : body.penalty ?? false,
+    },
+    include: { player: true, assistant: true }
+  })
+
+  invalidateCache(teamId as string)
+
+  return res.json({ goal: updatedGoal })
 }

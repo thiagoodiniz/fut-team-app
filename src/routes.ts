@@ -454,6 +454,7 @@ routes.get('/players/:id/photo', photoCacheMiddleware(), getPlayerPhoto)
  */
 routes.get('/players/:id/stats', authMiddleware, cacheMiddleware(), getPlayerStats)
 routes.get('/players/:id/goal-matches', authMiddleware, cacheMiddleware(), getPlayerGoalMatches)
+routes.get('/players/:id/assist-matches', authMiddleware, cacheMiddleware(), require('./modules/players/players.controller').getPlayerAssistMatches)
 routes.get(
   '/players/:id/presence-matches',
   authMiddleware,
@@ -733,6 +734,7 @@ routes.post('/matches/:id/goals', authMiddleware, adminMiddleware, createMatchGo
  *       204: { description: Goal deleted }
  */
 routes.delete('/goals/:id', authMiddleware, adminMiddleware, deleteGoal)
+routes.patch('/goals/:id', authMiddleware, adminMiddleware, require('./modules/goals/goals.controller').updateGoal)
 
 // Seasons
 /**

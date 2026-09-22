@@ -34,9 +34,9 @@ model User {
 
   isManager Boolean @default(false)
 
-  teams    UserTeam[]
-  accounts OAuthAccount[]
-  joinRequests JoinRequest[]
+  teams                UserTeam[]
+  accounts             OAuthAccount[]
+  joinRequests         JoinRequest[]
   teamCreationRequests TeamCreationRequest[]
 
   lastTeamId String?
@@ -56,14 +56,14 @@ model Team {
   primaryColor   String?
   secondaryColor String?
 
-  users   UserTeam[]
-  players Player[]
-  matches Match[]
-  seasons Season[]
+  users        UserTeam[]
+  players      Player[]
+  matches      Match[]
+  seasons      Season[]
   joinRequests JoinRequest[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 }
 
@@ -104,7 +104,7 @@ model OAuthAccount {
 }
 
 model JoinRequest {
-  id     String @id @default(uuid())
+  id     String            @id @default(uuid())
   userId String
   teamId String
   status JoinRequestStatus @default(PENDING)
@@ -129,12 +129,13 @@ model Player {
   nickname String?
   position String?
   number   Int?
-  photo    String?  @db.Text
+  photo    String? @db.Text
   active   Boolean @default(true)
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   goals     Goal[]
+  assists   Goal[]     @relation("AssistantRelation")
   presences Presence[]
 
   seasonPlayers SeasonPlayer[]
@@ -211,23 +212,28 @@ model Match {
 }
 
 model Goal {
-  id       String @id @default(uuid())
-  matchId  String
-  playerId String?
+  id               String  @id @default(uuid())
+  matchId          String
+  playerId         String?
   loanedPlayerName String?
 
-  minute  Int?
-  ownGoal Boolean @default(false)
+  assistantId         String?
+  loanedAssistantName String?
+
+  minute   Int?
+  ownGoal  Boolean @default(false)
   freeKick Boolean @default(false)
   penalty  Boolean @default(false)
 
-  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player Player? @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  match     Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player    Player? @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  assistant Player? @relation("AssistantRelation", fields: [assistantId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
 
   @@index([matchId])
   @@index([playerId])
+  @@index([assistantId])
 }
 
 model Presence {
@@ -248,16 +254,16 @@ model Presence {
 }
 
 model TeamCreationRequest {
-  id        String @id @default(uuid())
-  userId    String
-  teamName  String
-  userName  String
-  phone     String
-  email     String
-  status    JoinRequestStatus @default(PENDING)
-  
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id       String            @id @default(uuid())
+  userId   String
+  teamName String
+  userName String
+  phone    String
+  email    String
+  status   JoinRequestStatus @default(PENDING)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

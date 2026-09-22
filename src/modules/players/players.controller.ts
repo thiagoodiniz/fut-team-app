@@ -224,12 +224,15 @@ export async function getPlayerStats(req: Request, res: Response) {
     return res.json({ stats: { presences: 0, totalMatches: 0, goals: 0 } })
   }
 
-  const [presenceCount, goalCount] = await Promise.all([
+  const [presenceCount, goalCount, assistCount] = await Promise.all([
     prisma.presence.count({
       where: { playerId, matchId: { in: matchIds }, present: true },
     }),
     prisma.goal.count({
       where: { playerId, matchId: { in: matchIds }, ownGoal: false },
+    }),
+    prisma.goal.count({
+      where: { assistantId: playerId, matchId: { in: matchIds } },
     }),
   ])
 
@@ -238,6 +241,7 @@ export async function getPlayerStats(req: Request, res: Response) {
       presences: presenceCount,
       totalMatches: matchIds.length,
       goals: goalCount,
+      assists: assistCount,
     },
   })
 }
@@ -411,6 +415,88 @@ export async function getPlayerPresenceMatches(req: Request, res: Response) {
     player,
     matches: result,
     stats: { presentCount, absentCount, totalMatches },
+  })
+}
+
+export async function getPlayerAssistMatches(req: Request, res: Response) {
+  const { teamId } = req.auth!
+  const playerId = req.params.id as string
+  const seasonId = req.query.seasonId as string | undefined
+
+  let player: any = null
+  if (playerId.startsWith('loaned:')) {
+    const name = playerId.replace('loaned:', '')
+    player = { id: playerId, name, nickname: name, photo: null, isLoaned: true }
+  } else {
+    player = await prisma.player.findFirst({
+      where: { id: playerId, teamId },
+      select: { id: true, name: true, nickname: true, photo: true },
+    })
+  }
+
+  if (!player) {
+    return res.status(404).json({ error: 'PLAYER_NOT_FOUND' })
+  }
+
+  let resolvedSeasonId = seasonId
+  if (!resolvedSeasonId) {
+    const activeSeason = await prisma.season.findFirst({
+      where: { teamId, isActive: true },
+      select: { id: true },
+    })
+    resolvedSeasonId = activeSeason?.id
+  }
+
+  if (!resolvedSeasonId) {
+    return res.json({ player, matches: [] })
+  }
+
+  const matches = await prisma.match.findMany({
+    where: { teamId, seasonId: resolvedSeasonId },
+    orderBy: { date: 'desc' },
+    include: {
+      goals: {
+        where: { ownGoal: false },
+        include: { player: { select: { id: true, name: true, nickname: true } }, assistant: { select: { id: true, name: true, nickname: true } } },
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  })
+
+  const result = matches
+    .filter((m) =>
+      m.goals.some(
+        (g) =>
+          g.assistantId === playerId ||
+          (g.loanedAssistantName && `loaned:${g.loanedAssistantName}` === playerId),
+      ),
+    )
+    .map((m) => ({
+      id: m.id,
+      date: m.date,
+      location: m.location,
+      opponent: m.opponent ?? 'Sem adversario',
+      ourScore: m.ourScore,
+      theirScore: m.theirScore,
+      competition: m.competition,
+      competitionPhase: m.competitionPhase,
+      playerGoals: m.goals.filter(
+        (g) =>
+          g.assistantId === playerId ||
+          (g.loanedAssistantName && `loaned:${g.loanedAssistantName}` === playerId),
+      ).length,
+      scorers: m.goals
+        .filter((g) => g.player || g.loanedPlayerName)
+        .map((g) => ({
+          playerId: g.playerId || `loaned:${g.loanedPlayerName}`,
+          name: g.player?.name || g.loanedPlayerName!,
+          nickname: g.player?.nickname || g.loanedPlayerName!,
+        })),
+    }))
+
+  return res.json({
+    player,
+    matches: result,
   })
 }
 
