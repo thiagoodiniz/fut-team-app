@@ -940,6 +940,7 @@ import {
   getDashboardSummary, 
   getDashboardLastMatches, 
   getDashboardTopScorers, 
+  getDashboardTopAssistants,
   getDashboardAttendance 
 } from './modules/dashboard/dashboard.controller'
 
@@ -949,6 +950,7 @@ routes.get('/public/:slug/dashboard', publicMiddleware, cacheMiddleware(), getDa
 routes.get('/public/:slug/dashboard/summary', publicMiddleware, cacheMiddleware(), getDashboardSummary)
 routes.get('/public/:slug/dashboard/last-matches', publicMiddleware, cacheMiddleware(), getDashboardLastMatches)
 routes.get('/public/:slug/dashboard/top-scorers', publicMiddleware, cacheMiddleware(), getDashboardTopScorers)
+routes.get('/public/:slug/dashboard/top-assistants', publicMiddleware, cacheMiddleware(), getDashboardTopAssistants)
 routes.get('/public/:slug/dashboard/attendance', publicMiddleware, cacheMiddleware(), getDashboardAttendance)
 routes.get('/public/:slug/seasons', publicMiddleware, cacheMiddleware(), listSeasons)
 routes.get('/public/:slug/matches', publicMiddleware, cacheMiddleware(), listMatches)
