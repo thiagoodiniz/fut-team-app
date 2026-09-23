@@ -125,10 +125,10 @@ model Player {
   id     String @id @default(uuid())
   teamId String
 
-  name     String
-  nickname String?
-  position String?
-  number   Int?
+  name      String
+  nickname  String?
+  positions String[] @default([])
+  number    Int?
   photo    String? @db.Text
   active   Boolean @default(true)
 
