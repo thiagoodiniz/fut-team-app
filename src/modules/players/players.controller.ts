@@ -307,6 +307,7 @@ export async function getPlayerGoalMatches(req: Request, res: Response) {
       competition: m.competition,
       competitionPhase: m.competitionPhase,
       ourScore: m.ourScore,
+      theirScore: m.theirScore,
       scorers: m.goals
         .map((g) => {
           if (g.ownGoal) {
