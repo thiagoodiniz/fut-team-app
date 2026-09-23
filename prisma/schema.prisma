@@ -202,6 +202,8 @@ model Match {
 
   loanedPlayers String[] @default([])
 
+  lineup Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

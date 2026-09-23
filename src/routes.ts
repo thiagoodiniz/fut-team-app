@@ -25,6 +25,8 @@ import {
 
 import { listMatchPresences, upsertMatchPresences } from './modules/presences/presences.controller'
 
+import { getMatchLineup, saveMatchLineup } from './modules/matches/lineup.controller'
+
 import { createMatchGoal, deleteGoal, listMatchGoals } from './modules/goals/goals.controller'
 
 import {
@@ -736,6 +738,10 @@ routes.post('/matches/:id/goals', authMiddleware, adminMiddleware, createMatchGo
 routes.delete('/goals/:id', authMiddleware, adminMiddleware, deleteGoal)
 routes.patch('/goals/:id', authMiddleware, adminMiddleware, require('./modules/goals/goals.controller').updateGoal)
 
+// Lineup
+routes.get('/matches/:id/lineup', authMiddleware, getMatchLineup)
+routes.put('/matches/:id/lineup', authMiddleware, adminMiddleware, saveMatchLineup)
+
 // Seasons
 /**
  * @swagger
@@ -946,5 +952,9 @@ routes.get('/public/:slug/dashboard/top-scorers', publicMiddleware, cacheMiddlew
 routes.get('/public/:slug/dashboard/attendance', publicMiddleware, cacheMiddleware(), getDashboardAttendance)
 routes.get('/public/:slug/seasons', publicMiddleware, cacheMiddleware(), listSeasons)
 routes.get('/public/:slug/matches', publicMiddleware, cacheMiddleware(), listMatches)
+routes.get('/public/:slug/matches/:id', publicMiddleware, cacheMiddleware(), getMatchById)
+routes.get('/public/:slug/matches/:id/goals', publicMiddleware, cacheMiddleware(), listMatchGoals)
+routes.get('/public/:slug/matches/:id/presences', publicMiddleware, cacheMiddleware(), listMatchPresences)
+routes.get('/public/:slug/matches/:id/lineup', publicMiddleware, cacheMiddleware(), getMatchLineup)
 routes.get('/public/:slug/players', publicMiddleware, cacheMiddleware(), listPlayers)
 routes.get('/public/:slug/stats', publicMiddleware, cacheMiddleware(), getTeamStats)
