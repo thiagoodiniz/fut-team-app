@@ -215,7 +215,12 @@ export async function getPlayerStats(req: Request, res: Response) {
   }
 
   const matches = await prisma.match.findMany({
-    where: { teamId, seasonId: resolvedSeasonId },
+    where: {
+      teamId,
+      seasonId: resolvedSeasonId,
+      ourScore: { not: null },
+      theirScore: { not: null },
+    },
     select: { id: true },
   })
   const matchIds = matches.map((m) => m.id)
@@ -280,7 +285,12 @@ export async function getPlayerGoalMatches(req: Request, res: Response) {
   }
 
   const matches = await prisma.match.findMany({
-    where: { teamId, seasonId: resolvedSeasonId },
+    where: {
+      teamId,
+      seasonId: resolvedSeasonId,
+      ourScore: { not: null },
+      theirScore: { not: null },
+    },
     orderBy: { date: 'desc' },
     include: {
       goals: {
@@ -385,7 +395,12 @@ export async function getPlayerPresenceMatches(req: Request, res: Response) {
   }
 
   const matches: MatchWithPresence[] = await prisma.match.findMany({
-    where: { teamId, seasonId: resolvedSeasonId },
+    where: {
+      teamId,
+      seasonId: resolvedSeasonId,
+      ourScore: { not: null },
+      theirScore: { not: null },
+    },
     orderBy: { date: 'desc' },
     include: {
       goals: {
@@ -474,7 +489,12 @@ export async function getPlayerAssistMatches(req: Request, res: Response) {
   }
 
   const matches = await prisma.match.findMany({
-    where: { teamId, seasonId: resolvedSeasonId },
+    where: {
+      teamId,
+      seasonId: resolvedSeasonId,
+      ourScore: { not: null },
+      theirScore: { not: null },
+    },
     orderBy: { date: 'desc' },
     include: {
       goals: {

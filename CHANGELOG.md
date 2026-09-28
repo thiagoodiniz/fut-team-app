@@ -4,6 +4,9 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 
 ## [Unreleased]
 
+### Corrigido
+- **Estatísticas do Jogador (Presenças, Gols, Assistências):** Corrigido o cálculo individual de estatísticas e histórico de partidas de um jogador (`getPlayerStats`, `getPlayerPresenceMatches`, etc.) para considerar apenas jogos que já tenham o placar registrado (jogos finalizados), alinhando o comportamento com o Dashboard.
+
 ## [1.2.0] - 2026-09-22
 
 ### Adicionado
