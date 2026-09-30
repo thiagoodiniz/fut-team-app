@@ -1,10 +1,21 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
 import { z } from 'zod'
-import { TeamRole } from '@prisma/client'
+import { TeamRole, TeamVisibility } from '@prisma/client'
 import { invalidateCache } from '../../middlewares/cache'
 
 export async function searchTeams(req: Request, res: Response) {
+  let isAdmin = false;
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) {
+    const token = header.replace('Bearer ', '').trim();
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      isAdmin = !!decoded.isManager;
+    } catch {}
+  }
+  const visibilityFilter = isAdmin ? undefined : { in: ['PUBLIC', 'MEMBERS'] as TeamVisibility[] };
   const query = req.query.q as string
 
   const teams = await prisma.team.findMany({
@@ -16,14 +27,12 @@ export async function searchTeams(req: Request, res: Response) {
               { slug: { contains: query, mode: 'insensitive' } },
             ],
             isActive: true,
-            deletedAt: null,
-          }
-        : { isActive: true, deletedAt: null },
+            deletedAt: null, visibility: visibilityFilter }
+        : { isActive: true, deletedAt: null, visibility: visibilityFilter },
     select: {
       id: true,
       name: true,
-      slug: true,
-    },
+      slug: true, visibility: true },
     take: 20,
     orderBy: { name: 'asc' },
   })
@@ -390,3 +399,7 @@ export async function createTeam(req: Request, res: Response) {
     isManager: (user as any)?.isManager ?? false,
   })
 }
+
+
+
+

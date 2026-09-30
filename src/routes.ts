@@ -394,6 +394,13 @@ routes.get('/me', authMiddleware, async (req: Request, res: Response) => {
   })
   
   if (!user) return res.status(404).json({ error: 'USER_NOT_FOUND' })
+
+  if (req.auth?.teamId) {
+    prisma.userTeam.update({
+      where: { userId_teamId: { userId, teamId: req.auth.teamId } },
+      data: { lastAccessedAt: new Date() }
+    }).catch(() => {})
+  }
   
   const mappedTeams = user.teams.map((ut: any) => ({
     id: ut.team.id,
@@ -960,3 +967,6 @@ routes.get('/public/:slug/matches/:id/presences', publicMiddleware, cacheMiddlew
 routes.get('/public/:slug/matches/:id/lineup', publicMiddleware, cacheMiddleware(), getMatchLineup)
 routes.get('/public/:slug/players', publicMiddleware, cacheMiddleware(), listPlayers)
 routes.get('/public/:slug/stats', publicMiddleware, cacheMiddleware(), getTeamStats)
+
+
+

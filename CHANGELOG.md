@@ -4,6 +4,14 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-09-30
+
+### Adicionado
+- **Visibilidade de Times:** Implementado novo campo de visibilidade (PUBLIC, MEMBERS, ADMIN) na tabela Team, e adicionado controle de acesso (lastAccessedAt) em tempo real no UserTeam.
+- **Acesso de Administradores:** Refinamento do middleware p�blico e rota de busca de times para permitir que System Admins (isManager: true) acessem e visualizem times restritos na tela de onboarding sem bloqueios de autoriza��o.
+
+
+
 ### Corrigido
 - **Estatísticas do Jogador (Presenças, Gols, Assistências):** Corrigido o cálculo individual de estatísticas e histórico de partidas de um jogador (`getPlayerStats`, `getPlayerPresenceMatches`, etc.) para considerar apenas jogos que já tenham o placar registrado (jogos finalizados), alinhando o comportamento com o Dashboard.
 
@@ -38,3 +46,4 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
   - Remoção de todos os imports dinâmicos (`require`) de cache injetados nos controllers, que poderiam falhar silenciosamente. Utilização de imports estáticos.
   - Correção de vazamento de cache stale no controller de `replaceSeasonPlayers`, que não realizava invalidação após a modificação da lista de jogadores da temporada.
   - Invalidação específica de foto do jogador (`invalidatePlayerPhoto`) adicionada à rota de atualização de jogador, garantindo consistência com o TTL estendido.
+

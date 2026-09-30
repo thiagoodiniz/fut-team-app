@@ -23,6 +23,12 @@ enum JoinRequestStatus {
   REJECTED
 }
 
+enum TeamVisibility {
+  PUBLIC
+  MEMBERS
+  ADMIN
+}
+
 model User {
   id        String  @id @default(uuid())
   name      String
@@ -50,6 +56,7 @@ model Team {
   name String
   slug String @unique
 
+  visibility TeamVisibility @default(PUBLIC)
   isActive Boolean @default(true)
 
   logo           String? @db.Text
@@ -77,6 +84,7 @@ model UserTeam {
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+  lastAccessedAt DateTime @default(now())
 
   @@unique([userId, teamId])
   @@index([teamId])
@@ -271,3 +279,7 @@ model TeamCreationRequest {
 
   @@index([userId])
 }
+
+
+
+

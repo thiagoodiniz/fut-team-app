@@ -20,29 +20,49 @@ export async function publicMiddleware(req: Request, res: Response, next: NextFu
   }
 
   let loggedInUserId: string | null = null
+  let isManager = false
   const header = req.headers.authorization
   if (header?.startsWith('Bearer ')) {
     const token = header.replace('Bearer ', '').trim()
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
       if (decoded && decoded.userId) {
+        isManager = !!decoded.isManager
         loggedInUserId = decoded.userId
       }
     } catch {}
   }
 
-  if (loggedInUserId) {
-    try {
-      const existingUserTeam = await prisma.userTeam.findUnique({
-        where: {
-          userId_teamId: {
-            userId: loggedInUserId,
-            teamId: team.id,
-          },
-        },
-      })
+  let isMember = false
+  let userRole = 'MEMBER'
 
-      if (!existingUserTeam) {
+  if (loggedInUserId) {
+    const existingUserTeam = await prisma.userTeam.findUnique({
+      where: {
+        userId_teamId: {
+          userId: loggedInUserId,
+          teamId: team.id,
+        },
+      },
+    })
+    
+    if (existingUserTeam) {
+      isMember = true
+      userRole = existingUserTeam.role
+    }
+  }
+
+  if (team.visibility === 'ADMIN') {
+    if (!isManager && (!isMember || (userRole !== 'ADMIN' && userRole !== 'OWNER'))) {
+      return res.status(403).json({ error: 'FORBIDDEN' })
+    }
+  } else if (team.visibility === 'MEMBERS') {
+    if (!isManager && !isMember) {
+      return res.status(403).json({ error: 'FORBIDDEN' })
+    }
+  } else {
+    if (loggedInUserId && !isMember) {
+      try {
         await prisma.userTeam.create({
           data: {
             userId: loggedInUserId,
@@ -50,20 +70,29 @@ export async function publicMiddleware(req: Request, res: Response, next: NextFu
             role: 'MEMBER',
           },
         })
+        isMember = true
         invalidateCache(team.id)
-      }
-    } catch (err) {
-      // Ignorar erros de concorrência caso várias requisições públicas ocorram ao mesmo tempo
+      } catch (err) {}
     }
   }
 
   req.auth = {
     userId: loggedInUserId || 'public',
     teamId: team.id,
-    role: 'MEMBER',
-    isManager: false,
+    role: userRole as any,
+    isManager,
+  }
+
+  if (loggedInUserId && isMember) {
+    prisma.userTeam.update({
+      where: { userId_teamId: { userId: loggedInUserId, teamId: team.id } },
+      data: { lastAccessedAt: new Date() }
+    }).catch(() => {})
   }
 
   return next()
 }
+
+
+
 

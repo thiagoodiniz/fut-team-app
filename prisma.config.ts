@@ -10,3 +10,5 @@ module.exports = defineConfig({
     seed: 'tsx prisma/seed.ts',
   },
 })
+
+
