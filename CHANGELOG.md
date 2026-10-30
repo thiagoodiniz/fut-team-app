@@ -4,6 +4,14 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 
 ## [Unreleased]
 
+### Adicionado
+- **Gestão Financeira do Time (API e Banco):**
+  - Nova coluna `financeEnabled` (default `false`) em `Team`, configurável apenas pelo usuário MASTER em `PATCH /admin/teams/:id` e retornada em `GET /teams/active`.
+  - Nova tabela `FinancialTransaction` e enum `TransactionType` (`INCOME` / `EXPENSE`), com valores em centavos, vínculo com temporada (`seasonId`), e vínculo opcional com jogo (`matchId`, `onDelete: SetNull`) e jogador (`playerId`, `onDelete: SetNull`).
+  - Índice único parcial `(matchId, playerId)` garantindo um único pagamento por jogador por partida.
+  - Middleware `financeMiddleware` validando autenticação, perfil admin do time e flag `financeEnabled` ativa (sem cache).
+  - Rotas financeiras: `GET /finance/summary`, `GET /finance/transactions`, `POST /finance/transactions`, `PATCH /finance/transactions/:id`, `DELETE /finance/transactions/:id`, `GET /matches/:id/finance` e `PUT /matches/:id/finance/player-payments`.
+
 ## [2.8.0] - 2026-09-30
 
 ### Adicionado
