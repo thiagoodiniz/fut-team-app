@@ -4,6 +4,8 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-10-30
+
 ### Adicionado
 - **Gestão Financeira do Time (API e Banco):**
   - Nova coluna `financeEnabled` (default `false`) em `Team`, configurável apenas pelo usuário MASTER em `PATCH /admin/teams/:id` e retornada em `GET /teams/active`.
