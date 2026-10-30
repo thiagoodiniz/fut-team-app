@@ -51,3 +51,4 @@ ALTER TABLE "FinancialTransaction" ADD CONSTRAINT "FinancialTransaction_matchId_
 
 -- AddForeignKey
 ALTER TABLE "FinancialTransaction" ADD CONSTRAINT "FinancialTransaction_playerId_fkey" FOREIGN KEY ("playerId") REFERENCES "Player"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
