@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../../lib/prisma'
+import { invalidateCache } from '../../middlewares/cache'
 
 export async function getAdminDashboardStats(req: Request, res: Response) {
   // Somente manager (Owner do sistema)
@@ -46,7 +47,7 @@ export async function listAdminTeams(req: Request, res: Response) {
 
 export async function updateAdminTeam(req: Request, res: Response) {
   const id = req.params.id as string
-  const { name, slug, visibility } = req.body
+  const { name, slug, visibility, financeEnabled } = req.body
   
   if (!name || !slug) {
     return res.status(400).json({ error: 'INVALID_DATA' })
@@ -63,8 +64,16 @@ export async function updateAdminTeam(req: Request, res: Response) {
   
   const team = await prisma.team.update({
     where: { id },
-    data: { name, slug, visibility }
+    data: {
+      name,
+      slug,
+      visibility,
+      // Somente MASTER (managerMiddleware na rota) pode habilitar a gestão financeira
+      ...(typeof financeEnabled === 'boolean' ? { financeEnabled } : {}),
+    }
   })
+
+  invalidateCache(id)
   
   return res.json(team)
 }
