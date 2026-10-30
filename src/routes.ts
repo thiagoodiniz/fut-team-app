@@ -46,6 +46,16 @@ import {
 } from './modules/seasonPlayers/seasonPlayers.controllers'
 
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes'
+import { financeMiddleware } from './middlewares/finance'
+import {
+  createTransaction,
+  deleteTransaction,
+  getFinanceSummary,
+  getMatchFinance,
+  listTransactions,
+  updateTransaction,
+  upsertMatchPlayerPayments,
+} from './modules/finance/finance.controller'
 import { getTeam, updateTeam, getTeamLogo } from './modules/teams/teams.controller'
 import {
   createJoinRequest,
@@ -744,6 +754,16 @@ routes.post('/matches/:id/goals', authMiddleware, adminMiddleware, createMatchGo
  */
 routes.delete('/goals/:id', authMiddleware, adminMiddleware, deleteGoal)
 routes.patch('/goals/:id', authMiddleware, adminMiddleware, require('./modules/goals/goals.controller').updateGoal)
+
+// Finance (admin only + habilitado pelo MASTER; sem cache)
+const financeGuard = [authMiddleware, adminMiddleware, financeMiddleware]
+routes.get('/finance/summary', ...financeGuard, getFinanceSummary)
+routes.get('/finance/transactions', ...financeGuard, listTransactions)
+routes.post('/finance/transactions', ...financeGuard, createTransaction)
+routes.patch('/finance/transactions/:id', ...financeGuard, updateTransaction)
+routes.delete('/finance/transactions/:id', ...financeGuard, deleteTransaction)
+routes.get('/matches/:id/finance', ...financeGuard, getMatchFinance)
+routes.put('/matches/:id/finance/player-payments', ...financeGuard, upsertMatchPlayerPayments)
 
 // Lineup
 routes.get('/matches/:id/lineup', authMiddleware, getMatchLineup)
