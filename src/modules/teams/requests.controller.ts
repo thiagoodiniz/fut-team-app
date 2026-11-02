@@ -152,7 +152,12 @@ export async function listTeamMembers(req: Request, res: Response) {
   const { teamId } = req.auth!
 
   const members = await prisma.userTeam.findMany({
-    where: { teamId },
+    where: {
+      teamId,
+      user: {
+        isManager: false,
+      },
+    },
     include: {
       user: {
         select: {
@@ -160,6 +165,7 @@ export async function listTeamMembers(req: Request, res: Response) {
           name: true,
           email: true,
           avatarUrl: true,
+          isManager: true,
         },
       },
     },

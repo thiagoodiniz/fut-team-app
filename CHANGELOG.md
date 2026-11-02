@@ -5,6 +5,8 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 ## [Unreleased]
 
 ### Corrigido
+- **Ocultar Usuário Master/Manager em Membros do Time:** O endpoint `/teams/active/members` agora exclui usuários com flag `isManager: true` da listagem de membros do clube.
+- **Seleção de Time e Contexto no Login:** As rotas de login (`/auth/login`, `/auth/google`) agora aceitam `teamSlug` opcional para direcionar e atualizar imediatamente o `lastTeamId` para o clube acessado pelo usuário (ou para o clube informado caso ele seja manager/membro).
 - **Filtro de Acessos no Admin Dashboard:** O endpoint `/admin/stats` agora ignora acessos do usuário MASTER (`isManager: true`) tanto na contagem total quanto na listagem de últimos acessos de usuários.
 - **Validação de Placar ao Adicionar Gols:** A API agora exige placar do time (`ourScore`) definido e maior que zero para permitir a adição de gols na partida (`SCORE_REQUIRED` e `NO_GOALS_TO_ASSOCIATE`).
 

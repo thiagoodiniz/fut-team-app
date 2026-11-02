@@ -54,8 +54,57 @@ export async function register(req: Request, res: Response) {
   })
 }
 
+async function resolveTargetTeam(user: any, requestedSlug?: string | null) {
+  let targetTeam: any = null
+
+  if (requestedSlug) {
+    const slugLower = requestedSlug.toLowerCase()
+    targetTeam = user.teams.find((ut: any) => ut.team.slug?.toLowerCase() === slugLower)
+    if (!targetTeam && user.isManager) {
+      const managerTeam = await prisma.team.findFirst({
+        where: { slug: { equals: slugLower, mode: 'insensitive' }, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          isActive: true,
+          primaryColor: true,
+          secondaryColor: true,
+        },
+      })
+      if (managerTeam) {
+        targetTeam = {
+          team: managerTeam,
+          role: 'ADMIN',
+          teamId: managerTeam.id,
+        }
+      }
+    }
+  }
+
+  if (!targetTeam && user.lastTeamId) {
+    targetTeam = user.teams.find((ut: any) => ut.teamId === user.lastTeamId)
+  }
+
+  if (!targetTeam && user.teams.length > 0) {
+    targetTeam = user.teams[0]
+  }
+
+  if (targetTeam) {
+    const selectedTeamId = targetTeam.teamId || targetTeam.team.id
+    prisma.user
+      .update({
+        where: { id: user.id },
+        data: { lastTeamId: selectedTeamId },
+      })
+      .catch(console.error)
+  }
+
+  return targetTeam
+}
+
 export async function login(req: Request, res: Response) {
-  const { email, password } = loginSchema.parse(req.body)
+  const { email, password, teamSlug } = loginSchema.parse(req.body)
 
   const user = await prisma.user.findUnique({
     where: { email },
@@ -90,22 +139,7 @@ export async function login(req: Request, res: Response) {
     return res.status(401).json({ error: 'INVALID_CREDENTIALS' })
   }
 
-  let targetTeam = null
-
-  if (user.lastTeamId) {
-    targetTeam = user.teams.find((ut: any) => ut.teamId === user.lastTeamId)
-  }
-
-  if (!targetTeam && user.teams.length > 0) {
-    targetTeam = user.teams[0]
-    // Update lastTeamId asynchronously
-    prisma.user
-      .update({
-        where: { id: user.id },
-        data: { lastTeamId: targetTeam.teamId },
-      })
-      .catch(console.error)
-  }
+  const targetTeam = await resolveTargetTeam(user, teamSlug)
 
   if (!targetTeam) {
     return res.json({
@@ -158,7 +192,7 @@ export async function login(req: Request, res: Response) {
 }
 
 export async function googleLogin(req: Request, res: Response) {
-  const { idToken } = googleLoginSchema.parse(req.body)
+  const { idToken, teamSlug } = googleLoginSchema.parse(req.body)
 
   try {
     const ticket = await googleClient.verifyIdToken({
@@ -227,22 +261,7 @@ export async function googleLogin(req: Request, res: Response) {
       })
     }
 
-    let targetTeam = null
-
-    if (user.lastTeamId) {
-      targetTeam = user.teams.find((ut) => ut.teamId === user.lastTeamId)
-    }
-
-    if (!targetTeam && user.teams.length > 0) {
-      targetTeam = user.teams[0]
-      // Update lastTeamId asynchronously
-      prisma.user
-        .update({
-          where: { id: user.id },
-          data: { lastTeamId: targetTeam.teamId },
-        })
-        .catch(console.error)
-    }
+    const targetTeam = await resolveTargetTeam(user, teamSlug)
 
     if (!targetTeam) {
       return res.json({
