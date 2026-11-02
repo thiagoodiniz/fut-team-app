@@ -79,12 +79,26 @@ export async function createMatchGoal(req: Request, res: Response) {
     return res.status(400).json({ error: 'INVALID_GOAL_TYPE' })
   }
 
-  // Count existing goals (non-own-goals) + new non-own-goals
+  if (match.ourScore === null || match.ourScore === undefined) {
+    return res.status(400).json({
+      error: 'SCORE_REQUIRED',
+      message: 'Defina o placar da partida antes de associar gols',
+    })
+  }
+
+  if (match.ourScore <= 0) {
+    return res.status(400).json({
+      error: 'NO_GOALS_TO_ASSOCIATE',
+      message: 'Não há gols para associar nesta partida',
+    })
+  }
+
+  // Count existing goals + new goals
   const existingGoalsCount = await prisma.goal.count({
-    where: { matchId, ownGoal: false },
+    where: { matchId },
   })
-  const newNonOwnGoals = body.goals.filter((g) => !g.ownGoal).length
-  if (match.ourScore !== null && existingGoalsCount + newNonOwnGoals > match.ourScore) {
+  const newGoalsCount = body.goals.length
+  if (existingGoalsCount + newGoalsCount > match.ourScore) {
     return res
       .status(400)
       .json({ error: 'GOAL_LIMIT_EXCEEDED', message: 'Quantidade de gols excede o placar' })

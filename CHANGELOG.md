@@ -4,6 +4,9 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 
 ## [Unreleased]
 
+### Corrigido
+- **Validação de Placar ao Adicionar Gols:** A API agora exige placar do time (`ourScore`) definido e maior que zero para permitir a adição de gols na partida (`SCORE_REQUIRED` e `NO_GOALS_TO_ASSOCIATE`).
+
 ### Adicionado
 - **Auditoria de Usuários (Criação e Edição):**
   - Armazenamento do usuário criador (`createdById`) e editor (`updatedById`) para partidas (`Match`), presenças (`Presence`), gols (`Goal`) e transações financeiras (`FinancialTransaction`).
