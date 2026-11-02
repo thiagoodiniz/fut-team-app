@@ -30,12 +30,35 @@ export async function listMatches(req: Request, res: Response) {
     where: { teamId, seasonId: seasonId as string },
     orderBy: [{ date: 'desc' }],
     include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
       goals: {
-        select: { id: true, playerId: true, assistantId: true, ownGoal: true, loanedPlayerName: true, loanedAssistantName: true, player: { select: { id: true, name: true, nickname: true } }, assistant: { select: { id: true, name: true, nickname: true } } },
+        select: {
+          id: true,
+          playerId: true,
+          assistantId: true,
+          ownGoal: true,
+          loanedPlayerName: true,
+          loanedAssistantName: true,
+          createdById: true,
+          updatedById: true,
+          createdBy: { select: { id: true, name: true, email: true } },
+          updatedBy: { select: { id: true, name: true, email: true } },
+          player: { select: { id: true, name: true, nickname: true } },
+          assistant: { select: { id: true, name: true, nickname: true } },
+        },
       },
       presences: {
         where: { present: true },
-        select: { id: true, playerId: true, player: { select: { id: true, name: true, nickname: true } } },
+        select: {
+          id: true,
+          playerId: true,
+          createdById: true,
+          updatedById: true,
+          createdBy: { select: { id: true, name: true, email: true } },
+          updatedBy: { select: { id: true, name: true, email: true } },
+          player: { select: { id: true, name: true, nickname: true } },
+        },
       },
     },
   })
@@ -49,6 +72,10 @@ export async function getMatchById(req: Request, res: Response) {
 
   const match = await prisma.match.findFirst({
     where: { id: matchId, teamId: teamId as string },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
+    },
   })
 
   if (!match) {
@@ -59,7 +86,7 @@ export async function getMatchById(req: Request, res: Response) {
 }
 
 export async function createMatch(req: Request, res: Response) {
-  const { teamId } = req.auth!
+  const { teamId, userId } = req.auth!
   const body = createMatchSchema.parse(req.body)
 
   const seasonId = await getActiveSeasonId(teamId as string)
@@ -80,6 +107,12 @@ export async function createMatch(req: Request, res: Response) {
       ourScore: body.ourScore ?? null,
       theirScore: body.theirScore ?? null,
       loanedPlayers: body.loanedPlayers ?? [],
+      createdById: userId,
+      updatedById: userId,
+    },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
     },
   })
 
@@ -89,7 +122,7 @@ export async function createMatch(req: Request, res: Response) {
 }
 
 export async function updateMatch(req: Request, res: Response) {
-  const { teamId } = req.auth!
+  const { teamId, userId } = req.auth!
   const matchId = req.params.id as string
   const body = updateMatchSchema.parse(req.body)
 
@@ -119,6 +152,11 @@ export async function updateMatch(req: Request, res: Response) {
       ...('ourScore' in body ? { ourScore: body.ourScore ?? null } : {}),
       ...('theirScore' in body ? { theirScore: body.theirScore ?? null } : {}),
       ...(body.loanedPlayers !== undefined ? { loanedPlayers: body.loanedPlayers } : {}),
+      updatedById: userId,
+    },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
     },
   })
 

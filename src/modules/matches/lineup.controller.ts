@@ -24,7 +24,8 @@ export async function getMatchLineup(req: Request, res: Response) {
 
 export async function saveMatchLineup(req: Request, res: Response) {
   const matchId = req.params.id as string
-  const teamId = (req as any).teamId as string
+  const teamId = (req as any).teamId || req.auth?.teamId as string
+  const userId = req.auth?.userId
   const { formation, slots } = req.body as LineupData
 
   if (!formation || typeof formation !== 'string') {
@@ -46,7 +47,10 @@ export async function saveMatchLineup(req: Request, res: Response) {
 
   const updated = await prisma.match.update({
     where: { id: matchId },
-    data: { lineup: { formation, slots } as any },
+    data: {
+      lineup: { formation, slots } as any,
+      ...(userId ? { updatedById: userId } : {}),
+    },
     select: { lineup: true },
   })
 

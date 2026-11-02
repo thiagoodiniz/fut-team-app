@@ -11,6 +11,8 @@ import {
 const transactionInclude = {
   match: { select: { id: true, opponent: true, date: true } },
   player: { select: { id: true, name: true, nickname: true } },
+  createdBy: { select: { id: true, name: true, email: true } },
+  updatedBy: { select: { id: true, name: true, email: true } },
 } as const
 
 function badRequest(res: Response, error: { issues: unknown }) {
@@ -146,6 +148,7 @@ export async function createTransaction(req: Request, res: Response) {
         matchId: body.matchId ?? null,
         playerId: body.playerId ?? null,
         createdById: userId,
+        updatedById: userId,
       },
       include: transactionInclude,
     })
@@ -161,7 +164,7 @@ export async function createTransaction(req: Request, res: Response) {
 
 // PATCH /finance/transactions/:id
 export async function updateTransaction(req: Request, res: Response) {
-  const { teamId } = req.auth!
+  const { teamId, userId } = req.auth!
   const id = req.params.id as string
   const parsed = updateTransactionSchema.safeParse(req.body)
   if (!parsed.success) return badRequest(res, parsed.error)
@@ -193,6 +196,7 @@ export async function updateTransaction(req: Request, res: Response) {
         playerId: body.playerId,
         // Ao vincular a um jogo, a transação passa para a temporada do jogo
         seasonId: links.match?.seasonId,
+        updatedById: userId,
       },
       include: transactionInclude,
     })
@@ -286,7 +290,10 @@ export async function upsertMatchPlayerPayments(req: Request, res: Response) {
       return [
         prisma.financialTransaction.update({
           where: { id: existingId },
-          data: { amountCents: p.amountCents },
+          data: {
+            amountCents: p.amountCents,
+            updatedById: userId,
+          },
         }),
       ]
     }
@@ -304,6 +311,7 @@ export async function upsertMatchPlayerPayments(req: Request, res: Response) {
           matchId,
           playerId: p.playerId,
           createdById: userId,
+          updatedById: userId,
         },
       }),
     ]

@@ -27,7 +27,12 @@ export async function listMatchGoals(req: Request, res: Response) {
 
   const goals = await prisma.goal.findMany({
     where: { matchId },
-    include: { player: true, assistant: true },
+    include: {
+      player: true,
+      assistant: true,
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
+    },
     orderBy: [{ createdAt: 'asc' }],
   })
 
@@ -35,7 +40,7 @@ export async function listMatchGoals(req: Request, res: Response) {
 }
 
 export async function createMatchGoal(req: Request, res: Response) {
-  const { teamId } = req.auth!
+  const { teamId, userId } = req.auth!
   const matchId = req.params.id as string
   const body = createGoalSchema.parse(req.body)
 
@@ -95,13 +100,20 @@ export async function createMatchGoal(req: Request, res: Response) {
     ownGoal: g.ownGoal ?? false,
     freeKick: g.ownGoal ? false : g.freeKick ?? false,
     penalty: g.ownGoal ? false : g.penalty ?? false,
+    createdById: userId,
+    updatedById: userId,
   }))
 
   await prisma.$transaction(goalsData.map((data) => prisma.goal.create({ data })))
 
   const goals = await prisma.goal.findMany({
     where: { matchId },
-    include: { player: true, assistant: true },
+    include: {
+      player: true,
+      assistant: true,
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
+    },
     orderBy: [{ createdAt: 'asc' }],
   })
 
@@ -154,7 +166,7 @@ export async function deleteGoal(req: Request, res: Response) {
 }
 
 export async function updateGoal(req: Request, res: Response) {
-  const { teamId } = req.auth!
+  const { teamId, userId } = req.auth!
   const goalId = req.params.id as string
   const body = require('./goals.schemas').updateGoalSchema.parse(req.body)
 
@@ -190,8 +202,14 @@ export async function updateGoal(req: Request, res: Response) {
       loanedAssistantName: isOwnGoal ? null : body.loanedAssistantName ?? null,
       freeKick: isOwnGoal ? false : body.freeKick ?? false,
       penalty: isOwnGoal ? false : body.penalty ?? false,
+      updatedById: userId,
     },
-    include: { player: true, assistant: true }
+    include: {
+      player: true,
+      assistant: true,
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
+    }
   })
 
   invalidateCache(teamId as string)

@@ -45,6 +45,15 @@ model User {
   joinRequests         JoinRequest[]
   teamCreationRequests TeamCreationRequest[]
 
+  matchesCreated      Match[]                @relation("MatchCreatedBy")
+  matchesUpdated      Match[]                @relation("MatchUpdatedBy")
+  presencesCreated    Presence[]             @relation("PresenceCreatedBy")
+  presencesUpdated    Presence[]             @relation("PresenceUpdatedBy")
+  goalsCreated        Goal[]                 @relation("GoalCreatedBy")
+  goalsUpdated        Goal[]                 @relation("GoalUpdatedBy")
+  transactionsCreated FinancialTransaction[] @relation("FinancialTransactionCreatedBy")
+  transactionsUpdated FinancialTransaction[] @relation("FinancialTransactionUpdatedBy")
+
   lastTeamId String?
 
   createdAt DateTime @default(now())
@@ -208,8 +217,13 @@ model Match {
   ourScore   Int?
   theirScore Int?
 
-  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  season Season @relation(fields: [seasonId], references: [id], onDelete: Restrict)
+  createdById String?
+  updatedById String?
+
+  team      Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season    Season @relation(fields: [seasonId], references: [id], onDelete: Restrict)
+  createdBy User?  @relation("MatchCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?  @relation("MatchUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   goals     Goal[]
   presences Presence[]
@@ -226,6 +240,8 @@ model Match {
   @@index([seasonId])
   @@index([teamId])
   @@index([date])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model Goal {
@@ -242,15 +258,23 @@ model Goal {
   freeKick Boolean @default(false)
   penalty  Boolean @default(false)
 
+  createdById String?
+  updatedById String?
+
   match     Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
   player    Player? @relation(fields: [playerId], references: [id], onDelete: Cascade)
   assistant Player? @relation("AssistantRelation", fields: [assistantId], references: [id], onDelete: SetNull)
+  createdBy User?   @relation("GoalCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?   @relation("GoalUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([matchId])
   @@index([playerId])
   @@index([assistantId])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model Presence {
@@ -260,14 +284,22 @@ model Presence {
 
   present Boolean @default(true)
 
-  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  createdById String?
+  updatedById String?
+
+  match     Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player    Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("PresenceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?   @relation("PresenceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([matchId, playerId])
   @@index([matchId])
   @@index([playerId])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 enum TransactionType {
@@ -291,11 +323,14 @@ model FinancialTransaction {
   matchId     String?
   playerId    String?
   createdById String?
+  updatedById String?
 
-  team   Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  season Season  @relation(fields: [seasonId], references: [id], onDelete: Restrict)
-  match  Match?  @relation(fields: [matchId], references: [id], onDelete: SetNull)
-  player Player? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  team      Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season    Season  @relation(fields: [seasonId], references: [id], onDelete: Restrict)
+  match     Match?  @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  player    Player? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  createdBy User?   @relation("FinancialTransactionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?   @relation("FinancialTransactionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -303,6 +338,8 @@ model FinancialTransaction {
   @@index([teamId, seasonId, date])
   @@index([matchId])
   @@index([playerId])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model TeamCreationRequest {

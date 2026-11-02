@@ -33,6 +33,10 @@ export async function listMatchPresences(req: Request, res: Response) {
 
   const presences = await prisma.presence.findMany({
     where: { matchId },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      updatedBy: { select: { id: true, name: true, email: true } },
+    },
   })
 
   const result = seasonPlayers
@@ -44,7 +48,12 @@ export async function listMatchPresences(req: Request, res: Response) {
         matchId,
         playerId: sp.playerId,
         present: presence?.present ?? false,
+        createdById: presence?.createdById ?? null,
+        updatedById: presence?.updatedById ?? null,
+        createdBy: presence?.createdBy ?? null,
+        updatedBy: presence?.updatedBy ?? null,
         createdAt: presence?.createdAt ?? undefined,
+        updatedAt: presence?.updatedAt ?? undefined,
         player: sp.player,
       }
     })
@@ -54,7 +63,7 @@ export async function listMatchPresences(req: Request, res: Response) {
 }
 
 export async function upsertMatchPresences(req: Request, res: Response) {
-  const { teamId } = req.auth!
+  const { teamId, userId } = req.auth!
   const matchId = req.params.id as string
   const body = upsertPresencesSchema.parse(req.body)
 
@@ -101,9 +110,12 @@ export async function upsertMatchPresences(req: Request, res: Response) {
           matchId,
           playerId: p.playerId,
           present: p.present,
+          createdById: userId,
+          updatedById: userId,
         },
         update: {
           present: p.present,
+          updatedById: userId,
         },
       }),
     ),

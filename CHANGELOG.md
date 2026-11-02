@@ -4,6 +4,14 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 
 ## [Unreleased]
 
+### Adicionado
+- **Auditoria de Usuários (Criação e Edição):**
+  - Armazenamento do usuário criador (`createdById`) e editor (`updatedById`) para partidas (`Match`), presenças (`Presence`), gols (`Goal`) e transações financeiras (`FinancialTransaction`).
+  - Relacionamentos diretos com chave estrangeira para o model `User` (`createdBy` e `updatedBy` com `onDelete: SetNull`), permitindo joins automáticos e visualização associada diretamente no console/tabelas do Neon.
+  - Adicionado campo `updatedAt` nos models `Goal` e `Presence`.
+  - Atualização dos controllers (`matches`, `lineup`, `presences`, `goals`, `finance`) para persistir automaticamente `req.auth.userId` e retornar os dados do usuário associado.
+  - Migration `20261102153500_add_user_audit_relations`.
+
 ## [3.0.0] - 2026-10-30
 
 ### Adicionado
@@ -18,7 +26,7 @@ Todas as modificações relevantes deste projeto são documentadas neste arquivo
 
 ### Adicionado
 - **Visibilidade de Times:** Implementado novo campo de visibilidade (PUBLIC, MEMBERS, ADMIN) na tabela Team, e adicionado controle de acesso (lastAccessedAt) em tempo real no UserTeam.
-- **Acesso de Administradores:** Refinamento do middleware p�blico e rota de busca de times para permitir que System Admins (isManager: true) acessem e visualizem times restritos na tela de onboarding sem bloqueios de autoriza��o.
+- **Acesso de Administradores:** Refinamento do middleware p�blico e rota de busca de times para permitir que System Admins (isManager: true) acessem e visualizem times restritos na tela de onboarding sem bloqueios de autoriza��o.
 
 
 
