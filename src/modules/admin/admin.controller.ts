@@ -9,15 +9,26 @@ export async function getAdminDashboardStats(req: Request, res: Response) {
   const totalTeams = await prisma.team.count({ where: { deletedAt: null } })
   const pendingRequests = await prisma.teamCreationRequest.count({ where: { status: 'PENDING' } })
   
-  // Como as ligações de usuários a times estão em UserTeam
-  const totalAccesses = await prisma.userTeam.count()
+  // Como as ligações de usuários a times estão em UserTeam (ignora usuário MASTER isManager)
+  const totalAccesses = await prisma.userTeam.count({
+    where: {
+      user: {
+        isManager: false,
+      },
+    },
+  })
   
-  // List newest accesses (recently joined)
+  // List newest accesses (recently joined), ignorando usuário MASTER (isManager)
   const recentAccesses = await prisma.userTeam.findMany({
+    where: {
+      user: {
+        isManager: false,
+      },
+    },
     take: 20,
     orderBy: { lastAccessedAt: 'desc' },
     include: {
-      user: { select: { name: true, email: true } },
+      user: { select: { name: true, email: true, isManager: true } },
       team: { select: { name: true, slug: true } }
     }
   })
